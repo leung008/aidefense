@@ -154,16 +154,41 @@
 
   // -------------------- MAP & SPOT GENERATION --------------------
   function generatePath() {
-    const margin = 60, segments = 8, pts = [{ x: margin, y: H * 0.5 }];
-    const dx = (W - margin * 2) / segments;
-    for (let i = 1; i <= segments; i++) {
-      const amp = H * 0.28, phase = i % 2 === 0 ? 1 : -1;
-      const y = Math.max(margin + 20, Math.min(H - margin - 20, H * 0.5 + phase * amp * (0.6 + Math.sin(i * 1.3) * 0.4)));
-      pts.push({ x: margin + dx * i, y });
+    const margin = 50, segments = 8, pts = [];
+    const isPortrait = H > W * 1.15; // Dynamic orientation detection
+
+    if (isPortrait) {
+      // Portrait Stream: Flow from top to bottom
+      let y = margin;
+      const dy = (H - margin * 2) / segments;
+      pts.push({ x: W * 0.5, y });
+      for (let i = 1; i <= segments; i++) {
+        y = margin + dy * i;
+        const amp = W * 0.32, phase = i % 2 === 0 ? 1 : -1;
+        let x = W * 0.5 + phase * amp * (0.65 + Math.sin(i * 1.3) * 0.35);
+        x = Math.max(margin + 15, Math.min(W - margin - 15, x));
+        pts.push({ x, y });
+      }
+    } else {
+      // Landscape Stream: Flow from left to right
+      let x = margin;
+      const dx = (W - margin * 2) / segments;
+      pts.push({ x, y: H * 0.5 });
+      for (let i = 1; i <= segments; i++) {
+        x = margin + dx * i;
+        const amp = H * 0.28, phase = i % 2 === 0 ? 1 : -1;
+        let y = H * 0.5 + phase * amp * (0.6 + Math.sin(i * 1.3) * 0.4);
+        y = Math.max(margin + 20, Math.min(H - margin - 20, y));
+        pts.push({ x, y });
+      }
     }
+
     const smooth = [];
     for (let i = 0; i < pts.length - 1; i++) {
-      smooth.push(pts[i], { x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2 + (Math.random() - 0.5) * 15 });
+      smooth.push(pts[i], {
+        x: (pts[i].x + pts[i + 1].x) / 2 + (isPortrait ? (Math.random() - 0.5) * 12 : 0),
+        y: (pts[i].y + pts[i + 1].y) / 2 + (!isPortrait ? (Math.random() - 0.5) * 12 : 0)
+      });
     }
     smooth.push(pts[pts.length - 1]);
     state.path = smooth;
@@ -1078,9 +1103,28 @@
   function resize() {
     const container = document.getElementById('game-container'), hud = document.getElementById('hud');
     const rect = container.getBoundingClientRect();
-    W = Math.floor(rect.width); H = Math.floor(rect.height - hud.offsetHeight);
-    canvas.width = W; canvas.height = H;
-    if (state.path.length === 0) { generatePath(); generatePlacementSpots(); }
+    const oldW = W, oldH = H;
+    W = Math.floor(rect.width);
+    H = Math.floor(rect.height - (hud ? hud.offsetHeight : 0));
+    canvas.width = W;
+    canvas.height = H;
+
+    if (state.path.length === 0) {
+      generatePath();
+      generatePlacementSpots();
+    } else if (oldW && oldH && (W !== oldW || H !== oldH)) {
+      const oldIsPortrait = oldH > oldW * 1.15;
+      const newIsPortrait = H > W * 1.15;
+      if (oldIsPortrait !== newIsPortrait && state.towers.length === 0 && !state.waveActive) {
+        generatePath();
+        generatePlacementSpots();
+      } else {
+        const sx = W / oldW, sy = H / oldH;
+        for (const p of state.path) { p.x *= sx; p.y *= sy; }
+        for (const s of state.placementSpots) { s.x *= sx; s.y *= sy; }
+        for (const t of state.towers) { t.x *= sx; t.y *= sy; }
+      }
+    }
   }
 
   function toggleAudio() {
