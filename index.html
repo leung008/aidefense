@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Last Datacenter — Cyber Dice Defense</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <div id="hud">
+      <div class="stat-group">
+        <div class="stat" id="gold-stat">
+          <span class="label">CREDITS</span>
+          <span class="value" id="gold">300</span>
+        </div>
+        <div class="stat" id="lives-stat">
+          <span class="label">CORE</span>
+          <span class="value" id="lives">20</span>
+        </div>
+        <div class="stat" id="wave-stat">
+          <span class="label">WAVE</span>
+          <span class="value" id="wave">0</span>
+        </div>
+        <div class="stat" id="score-stat">
+          <span class="label">SCORE</span>
+          <span class="value" id="score">0</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="summon-btn" class="cyber-btn">
+          <span class="btn-text">SUMMON TOWER</span>
+          <span class="btn-cost">50¢</span>
+        </button>
+        <button id="start-wave-btn" class="cyber-btn accent">
+          <span class="btn-text">START WAVE</span>
+        </button>
+        <label class="cyber-check" title="Automatically start the next wave after clear">
+          <input type="checkbox" id="auto-wave-check">
+          <span class="check-box"></span>
+          <span class="check-label">AUTO WAVE</span>
+        </label>
+      </div>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <div id="message-overlay" class="hidden">
+      <div class="message-box">
+        <h2 id="message-title">LAST DATACENTER</h2>
+        <p id="message-text">
+          A new strain of AI virus is spreading across the net.<br>
+          This is humanity’s final Data Core — the last safe node left.<br><br>
+          Deploy <strong>Antivirus Programs</strong> along the data stream.<br>
+          <strong>Drag</strong> matching programs onto each other to merge &amp; level up.<br>
+          At <strong>Level 5</strong>, click a program to choose a powerful Evolution form.<br>
+          Stop the viral swarms. Protect the Core.
+        </p>
+        <button id="message-ok" class="cyber-btn accent">ENGAGE</button>
+      </div>
+    </div>
+
+    <div id="game-over-overlay" class="hidden">
+      <div class="message-box">
+        <h2 id="go-title">CORE BREACHED</h2>
+        <p id="go-text">Score: 0</p>
+        <button id="restart-btn" class="cyber-btn accent">REBOOT</button>
+      </div>
+    </div>
+
+    <div id="tooltip" class="hidden"></div>
+
+    <!-- Evolution choice panel -->
+    <div id="evo-overlay" class="hidden">
+      <div class="evo-box">
+        <h2>EVOLUTION PROTOCOL</h2>
+        <p id="evo-desc">Select an advanced antivirus form for this Level 5 program.</p>
+        <div class="evo-choices">
+          <button id="evo-choice-a" class="cyber-btn evo-btn">
+            <span class="evo-name" id="evo-name-a">Form A</span>
+            <span class="evo-detail" id="evo-detail-a">Description</span>
+          </button>
+          <button id="evo-choice-b" class="cyber-btn evo-btn accent">
+            <span class="evo-name" id="evo-name-b">Form B</span>
+            <span class="evo-detail" id="evo-detail-b">Description</span>
+          </button>
+        </div>
+        <button id="evo-cancel" class="cyber-btn" style="margin-top:16px">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

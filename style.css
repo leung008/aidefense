@@ -1,0 +1,359 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #0a0a12;
+  --neon-cyan: #00f0ff;
+  --neon-magenta: #ff00aa;
+  --neon-yellow: #f0ff00;
+  --neon-green: #00ff88;
+  --neon-orange: #ff6600;
+  --panel-bg: rgba(10, 15, 30, 0.85);
+  --glow: 0 0 10px currentColor, 0 0 20px currentColor;
+}
+
+body {
+  background: var(--bg-dark);
+  color: #e0e0ff;
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image:
+    radial-gradient(ellipse at 20% 30%, rgba(0, 100, 150, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(150, 0, 100, 0.1) 0%, transparent 50%),
+    linear-gradient(180deg, #050510 0%, #0a0a18 100%);
+}
+
+#game-container {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  height: 100vh;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  box-shadow:
+    0 0 30px rgba(0, 240, 255, 0.15),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+  background: rgba(5, 8, 20, 0.9);
+  overflow: hidden;
+}
+
+#hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(15, 20, 40, 0.95) 0%, rgba(10, 15, 30, 0.8) 100%);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.4);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.stat-group {
+  display: flex;
+  gap: 24px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 70px;
+}
+
+.stat .label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(0, 240, 255, 0.7);
+  font-family: 'Orbitron', sans-serif;
+}
+
+.stat .value {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 8px var(--neon-cyan);
+}
+
+#lives-stat .value { color: var(--neon-magenta); text-shadow: 0 0 8px var(--neon-magenta); }
+#wave-stat .value { color: var(--neon-yellow); text-shadow: 0 0 8px var(--neon-yellow); }
+#score-stat .value { color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); }
+
+.controls {
+  display: flex;
+  gap: 12px;
+}
+
+.cyber-btn {
+  position: relative;
+  background: linear-gradient(180deg, rgba(0, 40, 60, 0.9) 0%, rgba(0, 20, 40, 0.95) 100%);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  padding: 10px 18px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cyber-btn:hover {
+  background: linear-gradient(180deg, rgba(0, 60, 90, 0.95) 0%, rgba(0, 30, 60, 1) 100%);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.cyber-btn:active {
+  transform: translateY(1px);
+}
+
+.cyber-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.cyber-btn.accent {
+  border-color: var(--neon-magenta);
+  color: var(--neon-magenta);
+}
+
+.cyber-btn.accent:hover {
+  box-shadow: 0 0 15px rgba(255, 0, 170, 0.4);
+  background: linear-gradient(180deg, rgba(60, 0, 40, 0.95) 0%, rgba(30, 0, 20, 1) 100%);
+}
+
+.cyber-btn.active {
+  background: linear-gradient(180deg, rgba(0, 80, 100, 1) 0%, rgba(0, 40, 60, 1) 100%);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+}
+
+.cyber-btn .btn-cost {
+  font-size: 10px;
+  opacity: 0.8;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+#game-canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+  background: #050510;
+  cursor: crosshair;
+}
+
+#message-overlay, #game-over-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 15, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+#message-overlay.hidden, #game-over-overlay.hidden {
+  display: none;
+}
+
+.message-box {
+  background: linear-gradient(160deg, rgba(15, 25, 50, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
+  border: 1px solid var(--neon-cyan);
+  padding: 40px 50px;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.25), inset 0 0 30px rgba(0, 0, 0, 0.4);
+  clip-path: polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.message-box h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 28px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 15px var(--neon-cyan);
+  margin-bottom: 16px;
+  letter-spacing: 3px;
+}
+
+.message-box p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(200, 220, 255, 0.9);
+  margin-bottom: 28px;
+}
+
+#tooltip {
+  position: absolute;
+  background: rgba(10, 15, 30, 0.95);
+  border: 1px solid var(--neon-cyan);
+  padding: 8px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  max-width: 200px;
+}
+
+#tooltip.hidden {
+  display: none;
+}
+
+/* Auto-wave checkbox */
+.cyber-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--neon-cyan);
+  user-select: none;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(0, 30, 50, 0.6);
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  transition: all 0.2s ease;
+}
+
+.cyber-check:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+}
+
+.cyber-check input {
+  display: none;
+}
+
+.cyber-check .check-box {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--neon-cyan);
+  background: rgba(0, 20, 40, 0.8);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cyber-check input:checked + .check-box {
+  background: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.cyber-check input:checked + .check-box::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--neon-cyan);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.cyber-check .check-label {
+  white-space: nowrap;
+}
+
+/* Evolution panel */
+#evo-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 15, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 90;
+  backdrop-filter: blur(3px);
+}
+
+#evo-overlay.hidden {
+  display: none;
+}
+
+.evo-box {
+  background: linear-gradient(160deg, rgba(15, 25, 50, 0.97) 0%, rgba(10, 15, 30, 0.98) 100%);
+  border: 1px solid var(--neon-yellow);
+  padding: 28px 36px;
+  max-width: 520px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(240, 255, 0, 0.2), inset 0 0 30px rgba(0, 0, 0, 0.4);
+  clip-path: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.evo-box h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  color: var(--neon-yellow);
+  text-shadow: 0 0 12px var(--neon-yellow);
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.evo-box p {
+  font-size: 13px;
+  color: rgba(200, 220, 255, 0.85);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.evo-choices {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.evo-btn {
+  min-width: 180px;
+  padding: 14px 18px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.evo-btn .evo-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evo-btn .evo-detail {
+  font-size: 10px;
+  opacity: 0.8;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Scanline overlay effect */
+#game-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 5;
+}
