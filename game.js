@@ -26,11 +26,18 @@
   };
 
   const TOWER_TYPES = {
-    plasma:  { name: 'Plasma',  color: '#00f0ff', colorDim: '#0088aa', damageMult: 1.0, rangeMult: 1.0,  rateMult: 1.2, projectileSpeed: 320, aoe: false },
-    missile: { name: 'Missile', color: '#ff00aa', colorDim: '#aa0066', damageMult: 1.6, rangeMult: 1.15, rateMult: 0.6, projectileSpeed: 220, aoe: true, aoeRadius: 45 },
-    laser:   { name: 'Laser',   color: '#f0ff00', colorDim: '#aaaa00', damageMult: 0.7, rangeMult: 1.3,  rateMult: 2.0, projectileSpeed: 500, aoe: false },
+    plasma:    { name: 'Plasma',       role: 'Direct DPS',      color: '#00f0ff', colorDim: '#0088aa', damageMult: 1.0,  rangeMult: 1.0,  rateMult: 1.2, projectileSpeed: 320, aoe: false, desc: 'Balanced single-target energy bolts.' },
+    missile:   { name: 'Missile',      role: 'Area Blast',      color: '#ff00aa', colorDim: '#aa0066', damageMult: 1.6,  rangeMult: 1.15, rateMult: 0.6, projectileSpeed: 220, aoe: true, aoeRadius: 45, desc: 'Explosive rockets with splash damage.' },
+    laser:     { name: 'Laser',        role: 'Beam Sniper',     color: '#f0ff00', colorDim: '#aaaa00', damageMult: 0.7,  rangeMult: 1.3,  rateMult: 2.0, projectileSpeed: 500, aoe: false, desc: 'Ultra-rapid piercing laser beams.' },
+    buffer:    { name: 'Overclock',    role: 'Power-Up Aura',   color: '#c084fc', colorDim: '#7e22ce', damageMult: 0.0,  rangeMult: 1.25, rateMult: 1.0, isBuffer: true, buffDmg: 0.35, buffRate: 0.25, desc: 'Aura buffs damage & attack rate of nearby towers.' },
+    miner:     { name: 'Crypto Miner', role: 'Economy Engine',  color: '#10b981', colorDim: '#047857', damageMult: 0.0,  rangeMult: 0.8,  rateMult: 1.0, isMiner: true, mineInterval: 4.0, mineBase: 12, desc: 'Harvests credits (+12¢ + 4¢/lvl) every 4 seconds.' },
+    tesla:     { name: 'Arc Welder',   role: 'Close Melee DPS', color: '#38bdf8', colorDim: '#0284c7', damageMult: 3.4,  rangeMult: 0.65, rateMult: 2.4, isTesla: true, desc: 'Devastating short-range continuous electric arc.' },
+    frost:     { name: 'Cryo Coolant', role: 'Crowd Control',   color: '#67e8f9', colorDim: '#0891b2', damageMult: 0.8,  rangeMult: 1.05, rateMult: 1.1, projectileSpeed: 280, isFrost: true, slowMult: 0.55, desc: 'Chills targets, slowing speed by 45%.' },
+    railgun:   { name: 'Railgun',      role: 'Kinetic Piercer', color: '#f97316', colorDim: '#c2410c', damageMult: 3.6,  rangeMult: 1.7,  rateMult: 0.4, projectileSpeed: 750, isPierce: true, desc: 'Extreme-range hyper-velocity slug pierces lines.' },
+    firewall:  { name: 'Firewall',     role: 'Burn Over Time',  color: '#ef4444', colorDim: '#b91c1c', damageMult: 0.9,  rangeMult: 0.95, rateMult: 1.1, projectileSpeed: 300, isBurn: true, burnDmg: 9, desc: 'Ignites viruses, burning over 3 seconds.' },
+    corruptor: { name: 'Virus Hacker', role: 'Vulnerability',   color: '#84cc16', colorDim: '#4d7c0f', damageMult: 0.65, rangeMult: 1.1,  rateMult: 1.3, projectileSpeed: 340, isCorrupt: true, vulnMult: 1.35, desc: 'Hacks enemy defenses so they take +35% damage.' },
   };
-  const TYPE_KEYS = Object.keys(TOWER_TYPES);
+  const ALL_TYPE_KEYS = Object.keys(TOWER_TYPES);
 
   const EVOLUTIONS = {
     plasma: [
@@ -44,6 +51,34 @@
     laser: [
       { key: 'beam',   name: 'HEAVY BEAM',    detail: 'Thicker high-damage laser',  color: '#ffff66', damageMult: 2.2,  rateMult: 0.7,  rangeMult: 1.25, heavy: true },
       { key: 'spread', name: 'SPREAD LASER',  detail: 'Fires 3 angled beams',       color: '#ffee44', damageMult: 0.9,  rateMult: 1.15, rangeMult: 1.1,  multiShot: 3, spread: 0.28 }
+    ],
+    buffer: [
+      { key: 'hyper',  name: 'HYPER OVERCLOCK', detail: 'Massive +60% dmg aura & +40% range', color: '#e879f9', buffDmgBoost: 1.7, rangeMult: 1.4 },
+      { key: 'global', name: 'GLOBAL CLOCK',    detail: 'Aura covers entire datacenter node', color: '#c084fc', rangeMult: 3.5, buffDmgBoost: 0.9 }
+    ],
+    miner: [
+      { key: 'quantum',name: 'QUANTUM HASH',   detail: 'Yields +45¢ every 3 seconds', color: '#34d399', mineInterval: 3.0, mineBonus: 25 },
+      { key: 'surge',  name: 'SURGE MINER',    detail: 'Grants +120¢ bonus on every wave clear', color: '#10b981', waveBonus: 120 }
+    ],
+    tesla: [
+      { key: 'chain',  name: 'CHAIN VOLT',     detail: 'Electric arcs jump to 3 additional targets', color: '#38bdf8', damageMult: 1.4, chainTargets: 3 },
+      { key: 'storm',  name: 'TESLA VORTEX',   detail: 'Continuous 360-degree point-blank discharge', color: '#7dd3fc', damageMult: 2.2, rangeMult: 1.3 }
+    ],
+    frost: [
+      { key: 'deep',   name: 'DEEP FREEZE',    detail: 'Slows viruses by 70% and chills in AOE', color: '#a5f3fc', slowMult: 0.3, aoe: true, aoeRadius: 50 },
+      { key: 'shatter',name: 'CRYO SHATTER',   detail: 'Chilled enemies take +50% critical damage', color: '#67e8f9', damageMult: 1.8 }
+    ],
+    railgun: [
+      { key: 'tachyon',name: 'TACHYON SLUG',   detail: 'Doubled fire rate and infinite pierce', color: '#fb923c', rateMult: 2.0, pierce: true },
+      { key: 'emp',    name: 'EMP DISRUPTOR',  detail: 'Stuns hit targets for 1.2 seconds', color: '#f97316', damageMult: 1.4, stun: 1.2 }
+    ],
+    firewall: [
+      { key: 'napalm', name: 'NAPALM INFERNO', detail: 'Doubled burn DPS that leaves track hazards', color: '#f87171', burnDmgMult: 2.5 },
+      { key: 'plasmafire', name: 'BLUE FLAME', detail: 'High initial impact + lingering burn', color: '#ef4444', damageMult: 1.8, rateMult: 1.2 }
+    ],
+    corruptor: [
+      { key: 'exploit',name: 'ROOT EXPLOIT',   detail: 'Corrupted enemies take +60% damage', color: '#a3e635', debuffBoost: 2.0 },
+      { key: 'contagion', name: 'MALWARE CONTAGION', detail: 'Debuff infects adjacent enemies on death', color: '#84cc16', contagion: true }
     ]
   };
 
@@ -119,6 +154,17 @@
   const ctx = canvas.getContext('2d');
   let W = 0, H = 0;
 
+  // Load saved 4-tower squad or default to balanced squad
+  function loadSavedSquad() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cdd_squad'));
+      if (Array.isArray(saved) && saved.length === 4 && saved.every(k => TOWER_TYPES[k])) {
+        return saved;
+      }
+    } catch (_) {}
+    return ['plasma', 'missile', 'laser', 'buffer'];
+  }
+
   const state = {
     gold: CONFIG.START_GOLD,
     lives: CONFIG.START_LIVES,
@@ -128,6 +174,8 @@
     gameOver: false,
     selectedTower: null,
     evoTarget: null,
+    equippedTowers: loadSavedSquad(),
+    modalSquad: [],
     draggingTower: null,
     dragOffsetX: 0,
     dragOffsetY: 0,
@@ -222,17 +270,23 @@
   // -------------------- UTILITIES --------------------
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const lerp = (a, b, t) => a + (b - a) * t;
-  const randomType = () => TYPE_KEYS[Math.floor(Math.random() * TYPE_KEYS.length)];
+  const randomType = () => state.equippedTowers[Math.floor(Math.random() * state.equippedTowers.length)];
 
   function getTowerStats(type, level) {
-    const t = TOWER_TYPES[type], lvl = level;
+    const t = TOWER_TYPES[type] || TOWER_TYPES.plasma, lvl = level;
     return {
       damage: CONFIG.TOWER_DAMAGE_BASE * t.damageMult * (1 + (lvl - 1) * 0.75),
       range: CONFIG.TOWER_RANGE_BASE * t.rangeMult * (1 + (lvl - 1) * 0.12),
       fireRate: CONFIG.TOWER_FIRE_RATE_BASE * t.rateMult * (1 + (lvl - 1) * 0.15),
       color: t.color, colorDim: t.colorDim,
       aoe: t.aoe, aoeRadius: t.aoe ? t.aoeRadius * (1 + (lvl - 1) * 0.1) : 0,
-      projectileSpeed: t.projectileSpeed, name: t.name
+      projectileSpeed: t.projectileSpeed || 320, name: t.name,
+      role: t.role, desc: t.desc,
+      isBuffer: t.isBuffer, buffDmg: t.buffDmg, buffRate: t.buffRate,
+      isMiner: t.isMiner, mineInterval: t.mineInterval, mineBase: t.mineBase,
+      isTesla: t.isTesla, isFrost: t.isFrost, slowMult: t.slowMult,
+      isPierce: t.isPierce, isBurn: t.isBurn, burnDmg: t.burnDmg,
+      isCorrupt: t.isCorrupt, vulnMult: t.vulnMult
     };
   }
 
@@ -261,6 +315,39 @@
     update(dt) {
       this.pulse += dt * 3;
       this.cooldown = Math.max(0, this.cooldown - dt);
+
+      // Support Tower: Overclock Aura
+      if (this.type === 'buffer') {
+        const rng = this.stats.range;
+        const dmgBoost = (this.stats.buffDmg || 0.35) * ((this.evoData && this.evoData.buffDmgBoost) || 1) + (this.level - 1) * 0.05;
+        const rateBoost = (this.stats.buffRate || 0.25) + (this.level - 1) * 0.04;
+        for (const t of state.towers) {
+          if (t !== this && dist(this, t) <= rng) {
+            t.buffedDmg = Math.max(t.buffedDmg || 1, 1 + dmgBoost);
+            t.buffedRate = Math.max(t.buffedRate || 1, 1 + rateBoost);
+          }
+        }
+        return;
+      }
+
+      // Economy Tower: Crypto Miner
+      if (this.type === 'miner') {
+        this.mineTimer = (this.mineTimer || 0) + dt;
+        const interval = (this.evoData && this.evoData.mineInterval) || 4.0;
+        if (this.mineTimer >= interval) {
+          this.mineTimer = 0;
+          const payout = (this.stats.mineBase || 12) + this.level * 4 + ((this.evoData && this.evoData.mineBonus) || 0);
+          state.gold += payout;
+          state.score += payout * 5;
+          spawnFloatingText(this.x, this.y - 20, `+${payout}¢`, '#10b981');
+          sfx.playDeploy();
+          spawnParticles(this.x, this.y, '#10b981', 8);
+          updateHUD();
+        }
+        return;
+      }
+
+      // Targeting: Boss takes priority, otherwise closest in range
       this.target = null;
       if (state.activeBoss && state.activeBoss.alive && state.activeBoss.hp > 0 && dist(this, state.activeBoss) <= this.stats.range) {
         this.target = state.activeBoss;
@@ -273,17 +360,49 @@
           if (d <= this.stats.range && d < best) { best = d; this.target = e; }
         }
       }
+
       if (this.target) {
         this.angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-        if (this.cooldown <= 0) { this.fire(); this.cooldown = 1 / this.stats.fireRate; }
+        const effRate = this.stats.fireRate * (this.buffedRate || 1);
+        if (this.cooldown <= 0) {
+          this.fire();
+          this.cooldown = 1 / effRate;
+        }
       }
     }
     fire() {
       const s = this.stats, count = s.multiShot || 1, spread = s.spread || 0;
-      sfx.playShoot(this.type);
+      const effDmg = s.damage * (this.buffedDmg || 1);
+
+      // Melee Arc Welder (Tesla Shock)
+      if (this.type === 'tesla') {
+        sfx.playShoot('laser');
+        this.target.takeDamage(effDmg);
+        spawnParticles(this.target.x, this.target.y, '#38bdf8', 6);
+        // Chain lightning evolution
+        if (this.evoData && this.evoData.chainTargets) {
+          let chained = 0;
+          for (const en of state.enemies) {
+            if (en !== this.target && en.alive && en.hp > 0 && dist(this.target, en) < 80) {
+              en.takeDamage(effDmg * 0.7);
+              spawnParticles(en.x, en.y, '#7dd3fc', 4);
+              chained++;
+              if (chained >= this.evoData.chainTargets) break;
+            }
+          }
+        }
+        return;
+      }
+
+      sfx.playShoot(this.type === 'missile' ? 'missile' : (this.type === 'laser' || this.type === 'railgun') ? 'laser' : 'plasma');
+
       for (let i = 0; i < count; i++) {
         const offset = count === 1 ? 0 : (i - (count - 1) / 2) * spread;
-        state.projectiles.push(new Projectile(this.x, this.y, this.target, s.damage, s.projectileSpeed, this.type, s.aoe, s.aoeRadius, s.color, offset, s.pierce, s.heavy));
+        state.projectiles.push(new Projectile(
+          this.x, this.y, this.target, effDmg, s.projectileSpeed, this.type,
+          s.aoe, s.aoeRadius, s.color, offset, s.pierce || s.isPierce, s.heavy,
+          { isFrost: s.isFrost, slowMult: s.slowMult, isBurn: s.isBurn, burnDmg: s.burnDmg, isCorrupt: s.isCorrupt, vulnMult: s.vulnMult }
+        ));
       }
     }
     draw(ctx, overrideX, overrideY) {
@@ -388,7 +507,7 @@
     }
   }
 
-  class Enemy {
+ class Enemy {
     constructor(wave, type = 'drone', bossData = null) {
       this.pathIndex = 0; this.progress = 0;
       this.x = state.path[0].x; this.y = state.path[0].y;
@@ -520,11 +639,12 @@
   }
 
   class Projectile {
-    constructor(x, y, target, damage, speed, type, aoe, aoeR, color, angleOffset = 0, pierce = false, heavy = false) {
+    constructor(x, y, target, damage, speed, type, aoe, aoeR, color, angleOffset = 0, pierce = false, heavy = false, fx = {}) {
       this.x = x; this.y = y; this.target = target; this.damage = damage; this.speed = speed;
       this.type = type; this.aoe = aoe; this.aoeRadius = aoeR; this.color = color;
       this.alive = true; this.trail = []; this.angleOffset = angleOffset;
       this.pierce = pierce; this.heavy = heavy; this.hitList = []; this.life = pierce ? 1.4 : 2.5;
+      this.fx = fx || {};
       this.dir = target ? Math.atan2(target.y - y, target.x - x) + angleOffset : angleOffset;
     }
     update(dt) {
@@ -554,10 +674,15 @@
       }
     }
     applyHit(e) {
+      if (this.fx.isFrost) { e.slowTimer = 2.4; e.slowMult = this.fx.slowMult || 0.55; }
+      if (this.fx.isBurn) { e.burnTimer = 3.0; e.burnDmg = this.fx.burnDmg || 9; }
+      if (this.fx.isCorrupt) { e.vulnTimer = 3.5; e.vulnMult = this.fx.vulnMult || 1.35; }
+
       if (this.aoe) {
         for (const en of state.enemies) {
           if (en.alive && en.hp > 0 && dist(this, en) <= this.aoeRadius) {
             en.takeDamage(this.damage * (en === e ? 1 : 0.55));
+            if (this.fx.isFrost) { en.slowTimer = 2.4; en.slowMult = this.fx.slowMult || 0.55; }
           }
         }
         spawnParticles(this.x, this.y, this.color, this.heavy ? 22 : 14, this.aoeRadius * 0.55);
@@ -579,6 +704,7 @@
       ctx.restore();
     }
   }
+
   // -------------------- PARTICLES & FLOATING TEXTS --------------------
   function spawnParticles(x, y, color, count, spread = 30) {
     for (let i = 0; i < count; i++) {
@@ -784,15 +910,11 @@
     let best = null, bestD = Infinity;
     for (const t of state.towers) {
       if (t === exclude) continue;
-      const d = dist(pos, t);
-      // Generous 40px touch radius for mobile finger accuracy
-      const hitR = Math.max(40, 26 + t.level * 3.5);
+      const d = dist(pos, t), hitR = Math.max(40, 26 + t.level * 3.5);
       if (d < hitR && d < bestD) { bestD = d; best = t; }
     }
     return best;
   }
-
-  // -------------------- TOUCH & POINTER INPUT --------------------
 // -------------------- TOUCH & POINTER INPUT (DRAG & TAP TO MERGE) --------------------
   function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -1067,6 +1189,130 @@
     requestAnimationFrame(loop);
   }
 
+  // ============================================================
+  // TEAM BUILDER / SQUAD LOADOUT SYSTEM
+  // ============================================================
+  function renderTitleSquad() {
+    const container = document.getElementById('title-squad-chips');
+    if (!container) return;
+    container.innerHTML = '';
+    state.equippedTowers.forEach(k => {
+      const t = TOWER_TYPES[k];
+      if (!t) return;
+      const chip = document.createElement('div');
+      chip.className = 'squad-chip';
+      chip.style.setProperty('--chip-color', t.color);
+      chip.innerHTML = `
+        <span class="squad-chip-name">${t.name}</span>
+        <span class="squad-chip-role">${t.role}</span>
+      `;
+      container.appendChild(chip);
+    });
+  }
+
+  function openTeamModal() {
+    state.modalSquad = [...state.equippedTowers];
+    renderTeamModal();
+    document.getElementById('team-modal').classList.remove('hidden');
+  }
+
+  function closeTeamModal() {
+    document.getElementById('team-modal').classList.add('hidden');
+  }
+
+  function renderTeamModal() {
+    const slotsEl = document.getElementById('modal-squad-slots');
+    slotsEl.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const key = state.modalSquad[i];
+      const slot = document.createElement('div');
+      if (key && TOWER_TYPES[key]) {
+        const t = TOWER_TYPES[key];
+        slot.className = 'squad-slot-card';
+        slot.style.setProperty('--slot-color', t.color);
+        slot.innerHTML = `
+          <span class="slot-name">${t.name}</span>
+          <span class="slot-role">${t.role}</span>
+          <span class="slot-remove-badge">× TAP REMOVE</span>
+        `;
+        slot.addEventListener('click', () => {
+          if (state.modalSquad.length > 1) {
+            state.modalSquad.splice(i, 1);
+            renderTeamModal();
+          }
+        });
+      } else {
+        slot.className = 'squad-slot-card empty';
+        slot.innerHTML = `<span class="empty-text">+ EMPTY SLOT</span>`;
+      }
+      slotsEl.appendChild(slot);
+    }
+
+    document.getElementById('squad-count-text').textContent = `${state.modalSquad.length}/4`;
+
+    const rosterEl = document.getElementById('modal-roster-grid');
+    rosterEl.innerHTML = '';
+    ALL_TYPE_KEYS.forEach(k => {
+      const t = TOWER_TYPES[k];
+      const isEq = state.modalSquad.includes(k);
+      const card = document.createElement('div');
+      card.className = `roster-card ${isEq ? 'equipped' : ''}`;
+      card.style.setProperty('--card-color', t.color);
+
+      let statInfo = '';
+      if (t.isBuffer) statInfo = `BUFF: +${Math.round(t.buffDmg * 100)}% DMG | +${Math.round(t.buffRate * 100)}% SPD`;
+      else if (t.isMiner) statInfo = `YIELD: +${t.mineBase}¢ every ${t.mineInterval}s`;
+      else if (t.isTesla) statInfo = `DMG: High Arc | RNG: Short (55px)`;
+      else statInfo = `DMG: ${Math.round(CONFIG.TOWER_DAMAGE_BASE * t.damageMult)} | RNG: ${Math.round(CONFIG.TOWER_RANGE_BASE * t.rangeMult)} | RATE: ${(CONFIG.TOWER_FIRE_RATE_BASE * t.rateMult).toFixed(1)}/s`;
+
+      card.innerHTML = `
+        <div class="card-top-row">
+          <span class="card-title">${t.name}</span>
+          <span class="card-role-tag">${t.role}</span>
+        </div>
+        <p class="card-desc">${t.desc}</p>
+        <div class="card-stats-row">${statInfo}</div>
+        <span class="card-status-badge ${isEq ? 'eq' : 'avail'}">${isEq ? '✓ EQUIPPED IN SQUAD' : '+ TAP TO EQUIP'}</span>
+      `;
+
+      card.addEventListener('click', () => {
+        if (isEq) {
+          if (state.modalSquad.length > 1) {
+            state.modalSquad = state.modalSquad.filter(x => x !== k);
+            renderTeamModal();
+          }
+        } else {
+          if (state.modalSquad.length < 4) {
+            state.modalSquad.push(k);
+            renderTeamModal();
+          } else {
+            state.modalSquad[3] = k;
+            renderTeamModal();
+          }
+        }
+      });
+      rosterEl.appendChild(card);
+    });
+
+    const confirmBtn = document.getElementById('team-confirm-btn');
+    confirmBtn.disabled = state.modalSquad.length !== 4;
+  }
+
+  function confirmTeamLoadout() {
+    if (state.modalSquad.length !== 4) return;
+    state.equippedTowers = [...state.modalSquad];
+    try {
+      localStorage.setItem('cdd_squad', JSON.stringify(state.equippedTowers));
+    } catch (_) {}
+    renderTitleSquad();
+    closeTeamModal();
+  }
+
+  function setDefaultTeamLoadout() {
+    state.modalSquad = ['plasma', 'missile', 'laser', 'buffer'];
+    renderTeamModal();
+  }
+
   // -------------------- UI & LIFECYCLE --------------------
   function updateHUD() {
     document.getElementById('gold').textContent = state.gold;
@@ -1119,9 +1365,11 @@
       const oldIsPortrait = oldH > oldW * 1.15;
       const newIsPortrait = H > W * 1.15;
       if (oldIsPortrait !== newIsPortrait && state.towers.length === 0 && !state.waveActive) {
+        // Safe to regenerate path on empty board orientation change
         generatePath();
         generatePlacementSpots();
       } else {
+        // Fluid scale existing coordinates
         const sx = W / oldW, sy = H / oldH;
         for (const p of state.path) { p.x *= sx; p.y *= sy; }
         for (const s of state.placementSpots) { s.x *= sx; s.y *= sy; }
@@ -1151,6 +1399,12 @@
     document.getElementById('start-wave-btn').addEventListener('click', startWave);
     document.getElementById('restart-btn').addEventListener('click', restart);
     document.getElementById('audio-toggle-btn').addEventListener('click', toggleAudio);
+
+    document.getElementById('title-team-btn').addEventListener('click', openTeamModal);
+    document.getElementById('team-confirm-btn').addEventListener('click', confirmTeamLoadout);
+    document.getElementById('team-preset-btn').addEventListener('click', setDefaultTeamLoadout);
+    document.getElementById('team-cancel-btn').addEventListener('click', closeTeamModal);
+    renderTitleSquad();
 
     document.getElementById('title-start-btn').addEventListener('click', () => {
       sfx.init();
