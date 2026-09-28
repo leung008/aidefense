@@ -836,3 +836,224 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ============================================================
+   RESPONSIVE DESIGN: MEDIA QUERIES FOR DIFFERENT FORM FACTORS
+============================================================ */
+
+/* 1. Mobile Portrait (Smartphones upright, width <= 640px) */
+@media (max-width: 640px) {
+  #game-container {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: none;
+    box-shadow: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #hud {
+    flex-direction: column;
+    padding: 6px 10px;
+    gap: 6px;
+  }
+
+  .stat-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    text-align: center;
+  }
+
+  .stat {
+    min-width: 0;
+    align-items: center;
+  }
+
+  .stat .label {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+
+  .stat .value {
+    font-size: 16px;
+  }
+
+  .controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 2fr 1.9fr 1.6fr 1.2fr;
+    gap: 5px;
+  }
+
+  .cyber-btn {
+    padding: 6px 4px;
+    font-size: 8.5px;
+    min-height: 40px;
+    width: 100%;
+  }
+
+  .cyber-btn .btn-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cyber-btn .btn-cost {
+    font-size: 8px;
+  }
+
+  .cyber-check {
+    padding: 6px 4px;
+    font-size: 8.5px;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .cyber-check .check-box {
+    width: 12px;
+    height: 12px;
+  }
+
+  .icon-btn {
+    min-height: 40px;
+    padding: 6px 2px;
+    font-size: 8px;
+  }
+
+  #boss-bar-container {
+    top: 96px;
+    width: 94%;
+    padding: 6px 10px;
+  }
+
+  .guide-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .evo-choices {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .evo-btn {
+    min-width: 100%;
+    width: 100%;
+  }
+}
+
+/* 2. Mobile Landscape (Smartphones rotated horizontally, height <= 520px) */
+@media (max-height: 520px) and (orientation: landscape) {
+  #game-container {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: none;
+    box-shadow: none;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  #hud {
+    padding: 4px 12px;
+    height: 40px;
+    gap: 8px;
+  }
+
+  .stat-group {
+    gap: 14px;
+  }
+
+  .stat .label {
+    display: none;
+  }
+
+  .stat .value {
+    font-size: 15px;
+  }
+
+  .controls {
+    gap: 6px;
+  }
+
+  .cyber-btn {
+    padding: 4px 10px;
+    font-size: 9px;
+    min-height: 30px;
+  }
+
+  .cyber-btn .btn-cost {
+    display: inline;
+    margin-left: 4px;
+  }
+
+  .cyber-check {
+    padding: 4px 8px;
+    font-size: 9px;
+    min-height: 30px;
+  }
+
+  .icon-btn {
+    min-height: 30px;
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+
+  #boss-bar-container {
+    top: 46px;
+    width: 85%;
+    padding: 4px 8px;
+  }
+
+  .title-panel {
+    padding: 16px 24px;
+    max-height: 94dvh;
+  }
+
+  .terminal-box {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+
+  .guide-grid {
+    grid-template-columns: 1fr 1fr;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+}
+
+/* 3. Tablets & Small Laptops (641px to 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  #game-container {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: none;
+  }
+
+  #hud {
+    padding: 8px 16px;
+  }
+
+  .stat-group {
+    gap: 16px;
+  }
+
+  .stat .value {
+    font-size: 18px;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  .cyber-btn {
+    padding: 7px 12px;
+    font-size: 10px;
+  }
+}
