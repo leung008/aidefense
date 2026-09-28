@@ -918,14 +918,14 @@
     const opts = EVOLUTIONS[tower.type];
     if (!opts) return;
     state.evoTarget = tower;
-    document.getElementById('evo-name-a').textContent = opts[0].name;
-    document.getElementById('evo-detail-a').textContent = opts[0].detail;
-    document.getElementById('evo-name-b').textContent = opts.name;
-    document.getElementById('evo-detail-b').textContent = opts.detail;
+    const [choiceA, choiceB] = opts;
+    document.getElementById('evo-name-a').textContent = choiceA.name;
+    document.getElementById('evo-detail-a').textContent = choiceA.detail;
+    document.getElementById('evo-name-b').textContent = choiceB.name;
+    document.getElementById('evo-detail-b').textContent = choiceB.detail;
     document.getElementById('evo-desc').textContent = `Select an advanced form for this Level ${tower.level} ${TOWER_TYPES[tower.type].name} program.`;
     document.getElementById('evo-overlay').classList.remove('hidden');
   }
-  
 
   function applyEvolution(index) {
     const tower = state.evoTarget, opts = tower ? EVOLUTIONS[tower.type] : null;
@@ -1057,8 +1057,11 @@
   }
 
   function loop(ts) {
-    const dt = Math.min(0.05, (ts - state.lastTime) / 1000) || 0.016;
+    const rawDt = Math.min(0.05, (ts - state.lastTime) / 1000) || 0.016;
     state.lastTime = ts;
+    const speedBox = document.getElementById('speed-check');
+    const speedMultiplier = (speedBox && speedBox.checked) ? 2 : 1;
+    const dt = rawDt * speedMultiplier;
     if (state.running) update(dt);
     draw();
     requestAnimationFrame(loop);
