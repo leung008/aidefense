@@ -1,5 +1,5 @@
 // ============================================================
-// CYBER DICE DEFENSE - Tower Defense + Random Dice Merge
+// CYBER DICE DEFENSE - Enhanced Edition
 // ============================================================
 
 (() => {
@@ -17,7 +17,13 @@
     ENEMY_HP_BASE: 40,
     MERGE_MAX_LEVEL: 6,
     PATH_WIDTH: 36,
-    GRID_SIZE: 40,
+    MAX_WAVE: 20,
+    BOSS_WAVES: {
+      5: { name: 'MALWARE BEHEMOTH', sub: 'BRUTE FORCE ENCRYPTION UNIT', hpMult: 8.5, speedMult: 0.42, color: '#ff2244', reward: 120 },
+      10: { name: 'NEXUS OVERLORD', sub: 'DISTRIBUTED DENIAL MATRIX', hpMult: 13.0, speedMult: 0.45, color: '#ff00aa', reward: 180 },
+      15: { name: 'QUANTUM WORM', sub: 'POLYMORPHIC SUB-ROUTINE', hpMult: 18.0, speedMult: 0.52, color: '#f0ff00', reward: 260 },
+      20: { name: 'APOCALYPSE ZERO-DAY', sub: 'CORE TERMINATION SENTINEL', hpMult: 25.0, speedMult: 0.48, color: '#ff0055', reward: 400 },
+    }
   };
 
   // Tower types - cyberpunk themed
@@ -130,6 +136,177 @@
     ],
   };
 
+  // -------------------- AUDIO SYNTHESIZER (WEB AUDIO API) --------------------
+  class SoundFX {
+    constructor() {
+      this.ctx = null;
+      this.enabled = true;
+    }
+
+    init() {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) this.ctx = new AudioCtx();
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    }
+
+    playDeploy() {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(320, t);
+      osc.frequency.exponentialRampToValueAtTime(640, t + 0.12);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.14);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    }
+
+    playMerge() {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      [440, 554, 659, 880].forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t + idx * 0.05);
+        gain.gain.setValueAtTime(0.25, t + idx * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + idx * 0.05 + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t + idx * 0.05);
+        osc.stop(t + idx * 0.05 + 0.2);
+      });
+    }
+
+    playShoot(type) {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      if (type === 'laser') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, t);
+        osc.frequency.exponentialRampToValueAtTime(200, t + 0.08);
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.005, t + 0.09);
+      } else if (type === 'missile') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(260, t);
+        osc.frequency.exponentialRampToValueAtTime(90, t + 0.18);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.19);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, t);
+        osc.frequency.exponentialRampToValueAtTime(220, t + 0.1);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.11);
+      }
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    }
+
+    playExplosion(heavy = false) {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const bufferSize = this.ctx.sampleRate * (heavy ? 0.35 : 0.18);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(heavy ? 380 : 550, t);
+      filter.frequency.exponentialRampToValueAtTime(80, t + (heavy ? 0.35 : 0.18));
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(heavy ? 0.45 : 0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + (heavy ? 0.35 : 0.18));
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(t);
+      noise.stop(t + (heavy ? 0.36 : 0.2));
+    }
+
+    playEmergencyAlarm() {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+
+      for (let i = 0; i < 3; i++) {
+        const pulseStart = t + i * 0.55;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(520, pulseStart);
+        osc.frequency.linearRampToValueAtTime(840, pulseStart + 0.25);
+        osc.frequency.linearRampToValueAtTime(480, pulseStart + 0.48);
+
+        gain.gain.setValueAtTime(0.01, pulseStart);
+        gain.gain.linearRampToValueAtTime(0.35, pulseStart + 0.05);
+        gain.gain.setValueAtTime(0.35, pulseStart + 0.4);
+        gain.gain.exponentialRampToValueAtTime(0.01, pulseStart + 0.52);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(pulseStart);
+        osc.stop(pulseStart + 0.53);
+      }
+    }
+
+    playStageClear() {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      [392, 523, 659, 784, 1046].forEach((f, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, t + idx * 0.08);
+        gain.gain.setValueAtTime(0.25, t + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + idx * 0.08 + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t + idx * 0.08);
+        osc.stop(t + idx * 0.08 + 0.32);
+      });
+    }
+
+    playCoreBreached() {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, t);
+      osc.frequency.exponentialRampToValueAtTime(60, t + 0.8);
+      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.85);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.9);
+    }
+  }
+
+  const sfx = new SoundFX();
+
   // -------------------- STATE --------------------
   const canvas = document.getElementById('game-canvas');
   const ctx = canvas.getContext('2d');
@@ -143,8 +320,8 @@
     running: false,
     gameOver: false,
     selectedTower: null,
-    evoTarget: null, // tower waiting for evolution choice
-    // Drag-to-merge state
+    evoTarget: null,
+    // Drag-to-merge
     draggingTower: null,
     dragOffsetX: 0,
     dragOffsetY: 0,
@@ -163,11 +340,13 @@
     spawnTimer: 0,
     spawnInterval: 1.2,
     currentWaveData: null,
+    activeBoss: null,
+    inTransition: false,
+    fadeAlpha: 0,
   };
 
   // -------------------- PATH GENERATION --------------------
   function generatePath() {
-    // Generate a winding cyber path through the map
     const margin = 60;
     const pts = [];
     const segments = 8;
@@ -176,11 +355,9 @@
 
     pts.push({ x, y });
 
-    // Start from left, snake to right
     const dx = (W - margin * 2) / segments;
     for (let i = 1; i <= segments; i++) {
       x = margin + dx * i;
-      // Alternate up/down with some variation
       const amp = H * 0.28;
       const phase = i % 2 === 0 ? 1 : -1;
       y = H * 0.5 + phase * amp * (0.6 + Math.sin(i * 1.3) * 0.4);
@@ -188,13 +365,11 @@
       pts.push({ x, y });
     }
 
-    // Smooth the path a bit by adding mid points
     const smooth = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i];
       const b = pts[i + 1];
       smooth.push(a);
-      // intermediate
       smooth.push({
         x: (a.x + b.x) / 2,
         y: (a.y + b.y) / 2 + (Math.random() - 0.5) * 15,
@@ -205,7 +380,6 @@
   }
 
   function generatePlacementSpots() {
-    // Sample points along path and offset perpendicular to create valid tower slots
     const spots = [];
     const step = 28;
     const offsets = [55, 75, -55, -75];
@@ -216,10 +390,9 @@
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len; // perpendicular
+      const nx = -dy / len;
       const ny = dx / len;
-      const dist = len;
-      const count = Math.max(1, Math.floor(dist / step));
+      const count = Math.max(1, Math.floor(len / step));
 
       for (let s = 0; s < count; s++) {
         const t = (s + 0.5) / count;
@@ -229,9 +402,7 @@
         for (const off of offsets) {
           const sx = px + nx * off;
           const sy = py + ny * off;
-          // keep inside canvas with margin
           if (sx > 40 && sx < W - 40 && sy > 50 && sy < H - 40) {
-            // avoid duplicates
             const tooClose = spots.some(sp => Math.hypot(sp.x - sx, sp.y - sy) < 32);
             if (!tooClose) {
               spots.push({ x: sx, y: sy, occupied: false });
@@ -240,7 +411,6 @@
         }
       }
     }
-    // shuffle for randomness feeling
     for (let i = spots.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [spots[i], spots[j]] = [spots[j], spots[i]];
@@ -291,8 +461,8 @@
       this.id = Math.random().toString(36).slice(2);
       this.selected = false;
       this.mergeHighlight = false;
-      this.evolved = false;   // true after choosing evolution
-      this.evoData = null;    // the chosen EVOLUTIONS entry
+      this.evolved = false;
+      this.evoData = null;
     }
 
     get stats() {
@@ -320,15 +490,24 @@
       this.pulse += dt * 3;
       this.cooldown = Math.max(0, this.cooldown - dt);
 
-      // Find target
       this.target = null;
       let best = Infinity;
-      for (const e of state.enemies) {
-        if (e.hp <= 0) continue;
-        const d = dist(this, e);
-        if (d <= this.stats.range && d < best) {
-          best = d;
-          this.target = e;
+
+      if (state.activeBoss && state.activeBoss.alive && state.activeBoss.hp > 0) {
+        const d = dist(this, state.activeBoss);
+        if (d <= this.stats.range) {
+          this.target = state.activeBoss;
+        }
+      }
+
+      if (!this.target) {
+        for (const e of state.enemies) {
+          if (e.hp <= 0 || !e.alive) continue;
+          const d = dist(this, e);
+          if (d <= this.stats.range && d < best) {
+            best = d;
+            this.target = e;
+          }
         }
       }
 
@@ -345,6 +524,8 @@
       const s = this.stats;
       const count = s.multiShot || 1;
       const spread = s.spread || 0;
+      sfx.playShoot(this.type);
+
       for (let i = 0; i < count; i++) {
         const offset = count === 1 ? 0 : (i - (count - 1) / 2) * spread;
         state.projectiles.push(new Projectile(
@@ -373,7 +554,6 @@
       const isDrag = overrideX !== undefined;
       const isHL = this.selected || this.mergeHighlight;
 
-      // Shadow (2.5D)
       ctx.save();
       ctx.fillStyle = isDrag ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.45)';
       ctx.beginPath();
@@ -384,7 +564,6 @@
       ctx.save();
       ctx.translate(dx, dy);
 
-      // Outer glow — stronger at higher levels
       const glowR = size * (1.8 + lvl * 0.25);
       const g = ctx.createRadialGradient(0, 0, size * 0.2, 0, 0, glowR);
       g.addColorStop(0, s.color + (isDrag ? '88' : '55'));
@@ -404,17 +583,13 @@
       ctx.shadowColor = bodyColor;
       ctx.shadowBlur = (10 + lvl * 2) * glow;
 
-      // === LEVEL-BASED CHASSIS SHAPES ===
       if (lvl === 1) {
-        // Simple hex
         this._drawPoly(ctx, 6, size, 0.7);
       } else if (lvl === 2) {
-        // Hex + inner diamond
         this._drawPoly(ctx, 6, size, 0.7);
         ctx.lineWidth = 1.5;
         this._drawPoly(ctx, 4, size * 0.55, 0.85);
       } else if (lvl === 3) {
-        // Octagon with side fins
         this._drawPoly(ctx, 8, size, 0.72);
         ctx.beginPath();
         ctx.moveTo(size * 0.7, -size * 0.25);
@@ -423,13 +598,11 @@
         ctx.closePath();
         ctx.stroke();
       } else if (lvl === 4) {
-        // Star-like with outer ring
         this._drawPoly(ctx, 6, size, 0.7);
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 0, size * 0.85, 0, Math.PI * 2);
         ctx.stroke();
-        // Spikes
         for (let i = 0; i < 6; i++) {
           const a = (i / 6) * Math.PI * 2;
           ctx.beginPath();
@@ -438,7 +611,6 @@
           ctx.stroke();
         }
       } else if (lvl === 5) {
-        // Dual ring + cross
         this._drawPoly(ctx, 6, size, 0.68);
         ctx.lineWidth = 1.4;
         ctx.beginPath();
@@ -447,20 +619,17 @@
         ctx.beginPath();
         ctx.arc(0, 0, size * 1.05, 0, Math.PI * 2);
         ctx.stroke();
-        // Cross bars
         ctx.beginPath();
         ctx.moveTo(-size * 1.1, 0); ctx.lineTo(size * 1.1, 0);
         ctx.moveTo(0, -size * 0.85); ctx.lineTo(0, size * 0.85);
         ctx.stroke();
       } else {
-        // Level 6+ : complex fortress look
         this._drawPoly(ctx, 8, size, 0.7);
         ctx.lineWidth = 1.5;
         this._drawPoly(ctx, 4, size * 0.6, 0.9);
         ctx.beginPath();
         ctx.arc(0, 0, size * 0.95, 0, Math.PI * 2);
         ctx.stroke();
-        // Corner nodes
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
           ctx.beginPath();
@@ -470,13 +639,11 @@
         }
       }
 
-      // Core energy — grows with level
       ctx.shadowBlur = 10 + lvl * 2;
       ctx.fillStyle = bodyColor;
       ctx.beginPath();
       ctx.arc(0, 0, 3.5 + lvl * 1.1, 0, Math.PI * 2);
       ctx.fill();
-      // Inner white core for high levels
       if (lvl >= 3) {
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
@@ -484,19 +651,16 @@
         ctx.fill();
       }
 
-      // Barrel / emitter — longer & thicker at higher levels
       const barrelLen = size * (0.55 + lvl * 0.08);
       const barrelW = 2.5 + lvl * 0.6;
       ctx.fillStyle = bodyColor;
       ctx.shadowBlur = 6;
       ctx.fillRect(size * 0.35, -barrelW / 2, barrelLen, barrelW);
       if (lvl >= 3) {
-        // Extra side emitters
         ctx.fillRect(size * 0.3, -barrelW * 1.8, barrelLen * 0.6, barrelW * 0.6);
         ctx.fillRect(size * 0.3, barrelW * 1.2, barrelLen * 0.6, barrelW * 0.6);
       }
 
-      // Level / EVO indicator
       ctx.shadowBlur = 0;
       ctx.fillStyle = this.evolved ? '#f0ff00' : '#fff';
       ctx.font = `bold ${9 + lvl}px Orbitron, sans-serif`;
@@ -506,7 +670,6 @@
 
       ctx.restore();
 
-      // Range ring when highlighted or dragging
       if (isHL || isDrag) {
         ctx.save();
         ctx.strokeStyle = s.color + (isDrag ? '66' : '44');
@@ -536,21 +699,35 @@
   }
 
   class Enemy {
-    constructor(wave, type = 'drone') {
+    constructor(wave, type = 'drone', bossData = null) {
       this.pathIndex = 0;
-      this.progress = 0; // 0..1 along current segment
+      this.progress = 0;
       this.x = state.path[0].x;
       this.y = state.path[0].y;
       this.type = type;
       this.wave = wave;
+      this.bossData = bossData;
+      this.isBoss = type === 'boss';
 
-      const scale = 1 + (wave - 1) * 0.18;
-      this.maxHp = CONFIG.ENEMY_HP_BASE * scale * (type === 'tank' ? 2.5 : type === 'fast' ? 0.7 : 1);
-      this.hp = this.maxHp;
-      this.speed = CONFIG.ENEMY_SPEED_BASE * (type === 'fast' ? 1.6 : type === 'tank' ? 0.55 : 1) * (1 + (wave - 1) * 0.04);
-      this.radius = type === 'tank' ? 16 : type === 'fast' ? 9 : 12;
-      this.color = type === 'tank' ? '#ff4444' : type === 'fast' ? '#44ffaa' : '#ff88ff';
-      this.reward = Math.floor(8 + wave * 2.5 + (type === 'tank' ? 12 : 0));
+      const scale = 1 + (wave - 1) * 0.2;
+
+      if (this.isBoss && bossData) {
+        this.maxHp = CONFIG.ENEMY_HP_BASE * scale * bossData.hpMult;
+        this.hp = this.maxHp;
+        this.speed = CONFIG.ENEMY_SPEED_BASE * bossData.speedMult;
+        this.radius = 28;
+        this.color = bossData.color || '#ff2244';
+        this.reward = bossData.reward || 150;
+        this.bossRotation = 0;
+      } else {
+        this.maxHp = CONFIG.ENEMY_HP_BASE * scale * (type === 'tank' ? 2.5 : type === 'fast' ? 0.7 : 1);
+        this.hp = this.maxHp;
+        this.speed = CONFIG.ENEMY_SPEED_BASE * (type === 'fast' ? 1.6 : type === 'tank' ? 0.55 : 1) * (1 + (wave - 1) * 0.04);
+        this.radius = type === 'tank' ? 16 : type === 'fast' ? 9 : 12;
+        this.color = type === 'tank' ? '#ff4444' : type === 'fast' ? '#44ffaa' : '#ff88ff';
+        this.reward = Math.floor(8 + wave * 2.5 + (type === 'tank' ? 12 : 0));
+      }
+
       this.alive = true;
       this.hitFlash = 0;
       this.angle = 0;
@@ -560,14 +737,19 @@
       if (!this.alive || this.hp <= 0) return;
 
       this.hitFlash = Math.max(0, this.hitFlash - dt * 4);
+      if (this.isBoss) {
+        this.bossRotation += dt * 2.5;
+        updateBossBar(this);
+      }
 
-      // Move along path
       if (this.pathIndex >= state.path.length - 1) {
-        // Reached end
         this.alive = false;
-        state.lives--;
-        spawnFloatingText(this.x, this.y, 'VIRUS BREACH', '#ff00aa');
+        const damage = this.isBoss ? 5 : 1;
+        state.lives = Math.max(0, state.lives - damage);
+        spawnFloatingText(this.x, this.y, this.isBoss ? 'CRITICAL BREACH -5' : 'VIRUS BREACH', '#ff00aa');
+        sfx.playCoreBreached();
         updateHUD();
+        if (this.isBoss) hideBossBar();
         if (state.lives <= 0) endGame(false);
         return;
       }
@@ -597,12 +779,28 @@
     takeDamage(amount) {
       this.hp -= amount;
       this.hitFlash = 1;
+
+      if (this.isBoss) {
+        updateBossBar(this);
+      }
+
       if (this.hp <= 0) {
         this.alive = false;
         state.gold += this.reward;
-        state.score += this.reward * 10;
-        spawnParticles(this.x, this.y, this.color, 12);
-        spawnFloatingText(this.x, this.y, `+${this.reward}¢`, '#00ff88');
+        state.score += this.reward * (this.isBoss ? 25 : 10);
+
+        if (this.isBoss) {
+          sfx.playExplosion(true);
+          hideBossBar();
+          state.activeBoss = null;
+          spawnParticles(this.x, this.y, this.color, 45, 60);
+          spawnFloatingText(this.x, this.y, `BOSS DESTROYED! +${this.reward}¢`, '#f0ff00');
+        } else {
+          sfx.playExplosion(false);
+          spawnParticles(this.x, this.y, this.color, 12);
+          spawnFloatingText(this.x, this.y, `+${this.reward}¢`, '#00ff88');
+        }
+
         updateHUD();
       }
     }
@@ -610,59 +808,108 @@
     draw(ctx) {
       if (!this.alive) return;
 
-      // Shadow
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.beginPath();
-      ctx.ellipse(this.x + 3, this.y + 5, this.radius * 0.9, this.radius * 0.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x + 3, this.y + 6, this.radius * 1.1, this.radius * 0.45, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
       ctx.save();
       ctx.translate(this.x, this.y);
-      ctx.rotate(this.angle);
 
       const flash = this.hitFlash > 0;
       const col = flash ? '#ffffff' : this.color;
 
-      // Glow
-      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, this.radius * 2);
-      g.addColorStop(0, col + '88');
-      g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * 2, 0, Math.PI * 2);
-      ctx.fill();
+      if (this.isBoss) {
+        const g = ctx.createRadialGradient(0, 0, 5, 0, 0, this.radius * 2.4);
+        g.addColorStop(0, col + 'aa');
+        g.addColorStop(0.5, col + '33');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 2.4, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Body - angular cyber drone
-      ctx.fillStyle = 'rgba(20,10,30,0.9)';
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 2;
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 10;
+        ctx.save();
+        ctx.rotate(this.bossRotation);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 1.25, 0, Math.PI * 2);
+        ctx.stroke();
 
-      ctx.beginPath();
-      // diamond / arrow shape
-      ctx.moveTo(this.radius, 0);
-      ctx.lineTo(0, this.radius * 0.7);
-      ctx.lineTo(-this.radius * 0.6, this.radius * 0.4);
-      ctx.lineTo(-this.radius * 0.4, 0);
-      ctx.lineTo(-this.radius * 0.6, -this.radius * 0.4);
-      ctx.lineTo(0, -this.radius * 0.7);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * this.radius * 1.2, Math.sin(a) * this.radius * 1.2);
+          ctx.lineTo(Math.cos(a) * this.radius * 1.6, Math.sin(a) * this.radius * 1.6);
+          ctx.stroke();
+        }
+        ctx.restore();
 
-      // Core eye
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(this.radius * 0.2, 0, 3, 0, Math.PI * 2);
-      ctx.fill();
+        ctx.save();
+        ctx.rotate(-this.bossRotation * 1.4);
+        ctx.fillStyle = 'rgba(25, 4, 15, 0.95)';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const px = Math.cos(a) * this.radius * 0.85;
+          const py = Math.sin(a) * this.radius * 0.85;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+      } else {
+        ctx.rotate(this.angle);
+
+        const g = ctx.createRadialGradient(0, 0, 2, 0, 0, this.radius * 2);
+        g.addColorStop(0, col + '88');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(20,10,30,0.9)';
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        ctx.moveTo(this.radius, 0);
+        ctx.lineTo(0, this.radius * 0.7);
+        ctx.lineTo(-this.radius * 0.6, this.radius * 0.4);
+        ctx.lineTo(-this.radius * 0.4, 0);
+        ctx.lineTo(-this.radius * 0.6, -this.radius * 0.4);
+        ctx.lineTo(0, -this.radius * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(this.radius * 0.2, 0, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.restore();
 
-      // HP bar
-      if (this.hp < this.maxHp) {
+      if (!this.isBoss && this.hp < this.maxHp) {
         const barW = this.radius * 2.2;
         const ratio = Math.max(0, this.hp / this.maxHp);
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -672,7 +919,7 @@
       }
     }
   }
-
+  
   class Projectile {
     constructor(x, y, target, damage, speed, type, aoe, aoeR, color, angleOffset = 0, pierce = false, heavy = false) {
       this.x = x;
@@ -727,7 +974,8 @@
       for (const e of state.enemies) {
         if (!e.alive || e.hp <= 0) continue;
         if (this.hitList.indexOf(e) >= 0) continue;
-        if (dist(this, e) < 14 + (this.heavy ? 6 : 0)) {
+        const hitDistance = (e.isBoss ? e.radius + 6 : 14) + (this.heavy ? 6 : 0);
+        if (dist(this, e) < hitDistance) {
           this.applyHit(e);
           if (!this.pierce) {
             this.alive = false;
@@ -779,7 +1027,7 @@
   function spawnParticles(x, y, color, count, spread = 30) {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 40 + Math.random() * 80;
+      const speed = 40 + Math.random() * (spread * 3);
       state.particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
@@ -787,7 +1035,7 @@
         life: 0.4 + Math.random() * 0.5,
         maxLife: 0.6,
         color,
-        size: 2 + Math.random() * 3,
+        size: 2 + Math.random() * 3.5,
       });
     }
   }
@@ -843,24 +1091,53 @@
 
   // -------------------- WAVE SYSTEM --------------------
   function getWaveConfig(wave) {
+    const isBossWave = !!CONFIG.BOSS_WAVES[wave];
+    const bossData = CONFIG.BOSS_WAVES[wave] || null;
+
     const count = 6 + wave * 3;
     const types = [];
-    for (let i = 0; i < count; i++) {
-      let t = 'drone';
-      if (wave >= 3 && Math.random() < 0.15 + wave * 0.02) t = 'fast';
-      if (wave >= 5 && Math.random() < 0.1 + wave * 0.015) t = 'tank';
-      types.push(t);
+
+    if (isBossWave) {
+      const escorts = Math.floor(count * 0.6);
+      for (let i = 0; i < escorts; i++) {
+        types.push(i % 2 === 0 ? 'fast' : 'tank');
+      }
+      types.push({ type: 'boss', data: bossData });
+    } else {
+      for (let i = 0; i < count; i++) {
+        let t = 'drone';
+        if (wave >= 3 && Math.random() < 0.15 + wave * 0.02) t = 'fast';
+        if (wave >= 5 && Math.random() < 0.1 + wave * 0.015) t = 'tank';
+        types.push(t);
+      }
     }
+
     return {
       enemies: types,
       spawnInterval: Math.max(0.45, 1.3 - wave * 0.06),
+      isBossWave,
+      bossData,
     };
   }
 
   function startWave() {
-    if (state.waveActive || state.gameOver) return;
+    if (state.waveActive || state.gameOver || state.inTransition) return;
+
+    const nextWave = state.wave + 1;
+    const waveConfig = getWaveConfig(nextWave);
+
+    if (waveConfig.isBossWave) {
+      triggerBossWarning(waveConfig.bossData, () => {
+        executeWaveStart(waveConfig);
+      });
+    } else {
+      executeWaveStart(waveConfig);
+    }
+  }
+
+  function executeWaveStart(waveConfig) {
     state.wave++;
-    state.currentWaveData = getWaveConfig(state.wave);
+    state.currentWaveData = waveConfig;
     state.waveEnemiesLeft = state.currentWaveData.enemies.length;
     state.waveActive = true;
     state.spawnTimer = 0.5;
@@ -869,11 +1146,55 @@
     document.getElementById('start-wave-btn').disabled = true;
   }
 
+  function triggerBossWarning(bossData, onComplete) {
+    const overlay = document.getElementById('boss-warning-overlay');
+    const nameEl = document.getElementById('warning-boss-name');
+    nameEl.textContent = bossData.name;
+    overlay.classList.remove('hidden');
+
+    sfx.playEmergencyAlarm();
+
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      if (onComplete) onComplete();
+    }, 2200);
+  }
+
   function spawnEnemy() {
     if (!state.currentWaveData || state.currentWaveData.enemies.length === 0) return;
-    const type = state.currentWaveData.enemies.shift();
-    state.enemies.push(new Enemy(state.wave, type));
+    const item = state.currentWaveData.enemies.shift();
+
+    if (typeof item === 'object' && item.type === 'boss') {
+      const boss = new Enemy(state.wave, 'boss', item.data);
+      state.activeBoss = boss;
+      state.enemies.push(boss);
+      showBossBar(item.data.name);
+    } else {
+      state.enemies.push(new Enemy(state.wave, item));
+    }
+
     state.waveEnemiesLeft = state.currentWaveData.enemies.length + state.enemies.filter(e => e.alive).length;
+  }
+
+  function showBossBar(name) {
+    const bar = document.getElementById('boss-bar-container');
+    document.getElementById('boss-name').textContent = name;
+    document.getElementById('boss-hp-fill').style.width = '100%';
+    document.getElementById('boss-hp-text').textContent = '100%';
+    bar.classList.remove('hidden');
+  }
+
+  function updateBossBar(boss) {
+    const ratio = Math.max(0, boss.hp / boss.maxHp);
+    const pct = Math.round(ratio * 100);
+    const fill = document.getElementById('boss-hp-fill');
+    if (fill) fill.style.width = `${pct}%`;
+    const text = document.getElementById('boss-hp-text');
+    if (text) text.textContent = `${pct}%`;
+  }
+
+  function hideBossBar() {
+    document.getElementById('boss-bar-container').classList.add('hidden');
   }
 
   function checkWaveComplete() {
@@ -883,28 +1204,55 @@
       state.waveActive = false;
       const bonus = 25 + state.wave * 5;
       state.gold += bonus;
-      spawnFloatingText(W / 2, H / 2, `SWARM ${state.wave} PURGED +${bonus}¢`, '#00f0ff');
       updateHUD();
-      document.getElementById('start-wave-btn').disabled = false;
 
-      if (state.wave >= 20) {
+      sfx.playStageClear();
+
+      if (state.wave >= CONFIG.MAX_WAVE) {
         endGame(true);
         return;
       }
 
-      // Auto-start next wave if checkbox is on
-      const autoCheck = document.getElementById('auto-wave-check');
-      if (autoCheck && autoCheck.checked) {
-        setTimeout(() => {
-          if (!state.gameOver && !state.waveActive) startWave();
-        }, 1400);
-      }
+      triggerStageTransition(state.wave, bonus);
     }
+  }
+
+  function triggerStageTransition(clearedWave, bonus) {
+    state.inTransition = true;
+    const overlay = document.getElementById('stage-transition-overlay');
+    const title = document.getElementById('stage-trans-title');
+    const sub = document.getElementById('stage-trans-sub');
+    const preview = document.getElementById('stage-stats-preview');
+
+    title.textContent = `WAVE ${clearedWave} PURGED`;
+    const nextIsBoss = !!CONFIG.BOSS_WAVES[clearedWave + 1];
+    sub.textContent = nextIsBoss
+      ? '⚠️ CRITICAL: APEX SIGNATURE DETECTED IN NEXT SECTOR'
+      : 'DATA INTEGRITY SECURED // NODE RECHARGED';
+    sub.style.color = nextIsBoss ? '#ff2244' : '#f0ff00';
+    preview.textContent = `+${bonus}¢ RECHARGE BONUS`;
+
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.add('show'), 20);
+
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+        state.inTransition = false;
+        document.getElementById('start-wave-btn').disabled = false;
+
+        const autoCheck = document.getElementById('auto-wave-check');
+        if (autoCheck && autoCheck.checked && !state.gameOver && !state.waveActive) {
+          startWave();
+        }
+      }, 400);
+    }, 1600);
   }
 
   // -------------------- SUMMON & MERGE --------------------
   function summonTower() {
-    if (state.gold < CONFIG.SUMMON_COST || state.gameOver) return;
+    if (state.gold < CONFIG.SUMMON_COST || state.gameOver || state.inTransition) return;
 
     const free = state.placementSpots.filter(s => !s.occupied);
     if (free.length === 0) {
@@ -912,7 +1260,6 @@
       return;
     }
 
-    // Random free spot
     const spot = free[Math.floor(Math.random() * free.length)];
     const type = randomType();
     const tower = new Tower(spot.x, spot.y, type, 1);
@@ -920,13 +1267,14 @@
     spot.occupied = true;
     state.towers.push(tower);
     state.gold = Math.max(0, state.gold - CONFIG.SUMMON_COST);
+
+    sfx.playDeploy();
     spawnParticles(spot.x, spot.y, TOWER_TYPES[type].color, 10);
     spawnFloatingText(spot.x, spot.y - 20, 'DEPLOYED', TOWER_TYPES[type].color);
     updateHUD();
   }
 
   function tryMerge(target, dragged) {
-    // target stays, dragged is consumed
     if (!target || !dragged || target === dragged) return false;
     if (target.evolved || dragged.evolved) return false;
     if (target.type !== dragged.type || target.level !== dragged.level) return false;
@@ -936,12 +1284,12 @@
     target.level = newLevel;
     target.pulse = 0;
 
-    // Free dragged spot
     if (dragged.spot) dragged.spot.occupied = false;
     const idx = state.towers.indexOf(dragged);
     if (idx >= 0) state.towers.splice(idx, 1);
 
-    spawnParticles(target.x, target.y, target.stats.color, 22);
+    sfx.playMerge();
+    spawnParticles(target.x, target.y, target.stats.color, 24);
     spawnFloatingText(target.x, target.y - 28, `LV.${newLevel}!`, target.stats.color);
     return true;
   }
@@ -954,7 +1302,6 @@
   }
 
   function findTowerAt(pos, exclude) {
-    // Prefer higher level / closer
     let best = null;
     let bestD = Infinity;
     for (const t of state.towers) {
@@ -981,7 +1328,7 @@
   }
 
   function onPointerDown(e) {
-    if (state.gameOver || !state.running) return;
+    if (state.gameOver || !state.running || state.inTransition) return;
     e.preventDefault();
     const pos = getMousePos(e);
     const tower = findTowerAt(pos);
@@ -992,7 +1339,6 @@
       return;
     }
 
-    // Start drag (also used to detect click vs drag)
     state.draggingTower = tower;
     state.dragOffsetX = pos.x - tower.x;
     state.dragOffsetY = pos.y - tower.y;
@@ -1003,7 +1349,6 @@
     tower.selected = true;
     state.selectedTower = tower;
 
-    // Highlight valid merge partners (same type+level, not evolved)
     for (const t of state.towers) {
       if (t !== tower && !t.evolved && !tower.evolved &&
           t.type === tower.type && t.level === tower.level && t.level < CONFIG.MERGE_MAX_LEVEL) {
@@ -1016,7 +1361,6 @@
 
   function onPointerMove(e) {
     if (!state.draggingTower) {
-      // Hover tooltip
       if (state.gameOver) return;
       const pos = getMousePos(e);
       const t = findTowerAt(pos);
@@ -1051,7 +1395,6 @@
     );
     const wasClick = moved < 12;
 
-    // Click on Lv5 non-evolved → open evolution panel
     if (wasClick && state.draggingTower.level >= 5 && !state.draggingTower.evolved) {
       openEvolutionPanel(state.draggingTower);
       clearHighlights();
@@ -1080,8 +1423,8 @@
     state.evoTarget = tower;
     document.getElementById('evo-name-a').textContent = opts[0].name;
     document.getElementById('evo-detail-a').textContent = opts[0].detail;
-    document.getElementById('evo-name-b').textContent = opts[1].name;
-    document.getElementById('evo-detail-b').textContent = opts[1].detail;
+    document.getElementById('evo-name-b').textContent = opts.name;
+    document.getElementById('evo-detail-b').textContent = opts.detail;
     document.getElementById('evo-desc').textContent =
       `Select an advanced form for this Level ${tower.level} ${TOWER_TYPES[tower.type].name} program.`;
     document.getElementById('evo-overlay').classList.remove('hidden');
@@ -1095,6 +1438,7 @@
     tower.evolved = true;
     tower.evoData = opts[index];
     tower.pulse = 0;
+    sfx.playMerge();
     spawnParticles(tower.x, tower.y, opts[index].color, 28);
     spawnFloatingText(tower.x, tower.y - 30, opts[index].name, opts[index].color);
     closeEvolutionPanel();
@@ -1138,11 +1482,9 @@
 
   // -------------------- RENDER --------------------
   function drawBackground(ctx) {
-    // Dark base
     ctx.fillStyle = '#060610';
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle grid
     ctx.strokeStyle = 'rgba(0, 80, 120, 0.12)';
     ctx.lineWidth = 1;
     const gs = 40;
@@ -1159,7 +1501,6 @@
       ctx.stroke();
     }
 
-    // Ambient light blobs
     const t = performance.now() * 0.0003;
     const g1 = ctx.createRadialGradient(
       W * 0.3 + Math.sin(t) * 50, H * 0.3, 0,
@@ -1183,7 +1524,6 @@
   function drawPath(ctx) {
     if (state.path.length < 2) return;
 
-    // Glow under path
     ctx.save();
     ctx.lineWidth = CONFIG.PATH_WIDTH + 16;
     ctx.strokeStyle = 'rgba(0, 200, 255, 0.08)';
@@ -1196,19 +1536,16 @@
     }
     ctx.stroke();
 
-    // Main path
     ctx.lineWidth = CONFIG.PATH_WIDTH;
     ctx.strokeStyle = 'rgba(0, 40, 70, 0.85)';
     ctx.stroke();
 
-    // Neon edges
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
     ctx.shadowColor = '#00f0ff';
     ctx.shadowBlur = 12;
     ctx.stroke();
 
-    // Center line dashed
     ctx.shadowBlur = 0;
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
@@ -1216,11 +1553,9 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Start / End markers
     const start = state.path[0];
     const end = state.path[state.path.length - 1];
 
-    // Start portal
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 20;
     ctx.fillStyle = 'rgba(0, 255, 136, 0.3)';
@@ -1231,7 +1566,6 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // End core
     ctx.shadowColor = '#ff00aa';
     ctx.shadowBlur = 25;
     ctx.fillStyle = 'rgba(255, 0, 170, 0.25)';
@@ -1242,7 +1576,6 @@
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Core inner
     ctx.fillStyle = '#ff00aa';
     ctx.beginPath();
     ctx.arc(end.x, end.y, 8, 0, Math.PI * 2);
@@ -1252,7 +1585,6 @@
   }
 
   function drawPlacementHints(ctx) {
-    // Subtle dots for free spots when not too many towers
     if (state.towers.length > 12) return;
     ctx.save();
     for (const s of state.placementSpots) {
@@ -1269,7 +1601,6 @@
   function update(dt) {
     if (state.gameOver) return;
 
-    // Spawn
     if (state.waveActive && state.currentWaveData && state.currentWaveData.enemies.length > 0) {
       state.spawnTimer -= dt;
       if (state.spawnTimer <= 0) {
@@ -1278,12 +1609,10 @@
       }
     }
 
-    // Entities
     for (const t of state.towers) t.update(dt);
     for (const e of state.enemies) e.update(dt);
     for (const p of state.projectiles) p.update(dt);
 
-    // Cleanup
     state.enemies = state.enemies.filter(e => e.alive);
     state.projectiles = state.projectiles.filter(p => p.alive);
 
@@ -1296,10 +1625,8 @@
     drawPath(ctx);
     drawPlacementHints(ctx);
 
-    // Draw towers (skip the one being dragged so it can be drawn on top later)
     for (const t of state.towers) {
       if (t === state.draggingTower) {
-        // Draw a faint ghost at original position
         ctx.save();
         ctx.globalAlpha = 0.3;
         t.draw(ctx);
@@ -1313,12 +1640,10 @@
     for (const p of state.projectiles) p.draw(ctx);
     drawParticles(ctx);
 
-    // Draw dragged tower on top at cursor position
     if (state.draggingTower) {
       state.draggingTower.draw(ctx, state.dragX, state.dragY);
     }
 
-    // Hint while dragging
     if (state.draggingTower) {
       ctx.save();
       ctx.fillStyle = 'rgba(0, 240, 255, 0.7)';
@@ -1326,7 +1651,7 @@
       ctx.textAlign = 'center';
       ctx.shadowColor = '#00f0ff';
       ctx.shadowBlur = 8;
-      ctx.fillText('Drop on matching program to EVOLVE', W / 2, 26);
+      ctx.fillText('Drop on matching program to MERGE', W / 2, 26);
       ctx.restore();
     }
   }
@@ -1350,18 +1675,20 @@
     document.getElementById('score').textContent = state.score;
 
     const summonBtn = document.getElementById('summon-btn');
-    summonBtn.disabled = state.gold < CONFIG.SUMMON_COST || state.gameOver;
+    summonBtn.disabled = state.gold < CONFIG.SUMMON_COST || state.gameOver || state.inTransition;
   }
 
   function endGame(won) {
     state.gameOver = true;
     state.running = false;
+    hideBossBar();
+
     const overlay = document.getElementById('game-over-overlay');
     document.getElementById('go-title').textContent = won ? 'CORE SECURED' : 'CORE CORRUPTED';
     document.getElementById('go-title').style.color = won ? '#00ff88' : '#ff00aa';
-    document.getElementById('go-text').textContent = won
-      ? `The AI virus was purged. Humanity’s last Data Core stands.\nScore: ${state.score}  |  Waves: ${state.wave}`
-      : `The viral swarm overran the Core. The last human node has fallen.\nScore: ${state.score}  |  Waves: ${state.wave}`;
+    document.getElementById('go-sub').textContent = won ? 'MALWARE PURGED — ALL SUBNETS SAFE' : 'SECTOR OVERRUN BY VIRAL ENTITY';
+    document.getElementById('go-score').textContent = state.score;
+    document.getElementById('go-wave').textContent = `${state.wave}/${CONFIG.MAX_WAVE}`;
     overlay.classList.remove('hidden');
   }
 
@@ -1382,9 +1709,12 @@
     state.waveActive = false;
     state.waveEnemiesLeft = 0;
     state.currentWaveData = null;
+    state.activeBoss = null;
+    state.inTransition = false;
 
     for (const s of state.placementSpots) s.occupied = false;
 
+    hideBossBar();
     document.getElementById('game-over-overlay').classList.add('hidden');
     document.getElementById('start-wave-btn').disabled = false;
     updateHUD();
@@ -1404,6 +1734,13 @@
     }
   }
 
+  function toggleAudio() {
+    sfx.init();
+    sfx.enabled = !sfx.enabled;
+    const btn = document.getElementById('audio-icon');
+    btn.textContent = sfx.enabled ? '🔊 SFX ON' : '🔇 SFX OFF';
+  }
+
   function init() {
     resize();
     window.addEventListener('resize', () => {
@@ -1419,21 +1756,30 @@
 
     document.getElementById('summon-btn').addEventListener('click', summonTower);
     document.getElementById('start-wave-btn').addEventListener('click', startWave);
-    document.getElementById('message-ok').addEventListener('click', () => {
-      document.getElementById('message-overlay').classList.add('hidden');
+    document.getElementById('restart-btn').addEventListener('click', restart);
+    document.getElementById('audio-toggle-btn').addEventListener('click', toggleAudio);
+
+    document.getElementById('title-start-btn').addEventListener('click', () => {
+      sfx.init();
+      document.getElementById('title-screen-overlay').classList.add('hidden');
       state.running = true;
     });
-    document.getElementById('restart-btn').addEventListener('click', restart);
+
+    const guideModal = document.getElementById('guide-modal');
+    document.getElementById('title-guide-btn').addEventListener('click', () => {
+      guideModal.classList.toggle('hidden');
+    });
+    document.getElementById('close-guide-btn').addEventListener('click', () => {
+      guideModal.classList.add('hidden');
+    });
 
     document.getElementById('evo-choice-a').addEventListener('click', () => applyEvolution(0));
     document.getElementById('evo-choice-b').addEventListener('click', () => applyEvolution(1));
     document.getElementById('evo-cancel').addEventListener('click', closeEvolutionPanel);
 
-    // Drag-to-merge input
     canvas.addEventListener('mousedown', onPointerDown);
     window.addEventListener('mousemove', onPointerMove);
     window.addEventListener('mouseup', onPointerUp);
-    // Touch support
     canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         e.preventDefault();
@@ -1451,11 +1797,9 @@
     });
 
     updateHUD();
-    document.getElementById('message-overlay').classList.remove('hidden');
     requestAnimationFrame(loop);
   }
 
-  // Boot
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
