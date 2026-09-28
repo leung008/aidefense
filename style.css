@@ -884,8 +884,13 @@ body {
   .controls {
     width: 100%;
     display: grid;
-    grid-template-columns: 2fr 1.9fr 1.6fr 1.2fr;
-    gap: 5px;
+    grid-template-columns: 2fr 1.8fr 1.2fr 1.3fr 1fr;
+    gap: 4px;
+  }
+  .cyber-btn, .cyber-check, .icon-btn {
+    padding: 5px 3px;
+    font-size: 8px;
+    min-height: 38px;
   }
 
   .cyber-btn {
