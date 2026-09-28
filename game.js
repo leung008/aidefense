@@ -755,25 +755,36 @@
   }
 
   function findTowerAt(pos, exclude) {
+    if (!pos) return null;
     let best = null, bestD = Infinity;
     for (const t of state.towers) {
       if (t === exclude) continue;
-      const d = dist(pos, t), hitR = Math.max(34, 24 + t.level * 3.5);
+      const d = dist(pos, t);
+      // Generous 40px touch radius for mobile finger accuracy
+      const hitR = Math.max(40, 26 + t.level * 3.5);
       if (d < hitR && d < bestD) { bestD = d; best = t; }
     }
     return best;
   }
 
   // -------------------- TOUCH & POINTER INPUT --------------------
+// -------------------- TOUCH & POINTER INPUT (DRAG & TAP TO MERGE) --------------------
   function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
-    const cy = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : 0));
+    let cx = e.clientX, cy = e.clientY;
+    if (cx === undefined && e.touches && e.touches.length > 0) {
+      cx = e.touches[0].clientX; cy = e.touches[0].clientY;
+    } else if (cx === undefined && e.changedTouches && e.changedTouches.length > 0) {
+      cx = e.changedTouches[0].clientX; cy = e.changedTouches[0].clientY;
+    }
+    if (cx === undefined) { cx = 0; cy = 0; }
     return {
       x: (cx - rect.left) * (canvas.width / (rect.width || 1)),
       y: (cy - rect.top) * (canvas.height / (rect.height || 1))
     };
   }
+
+  let dragHasMoved = false;
 
   function onPointerDown(e) {
     if (state.gameOver || !state.running || state.inTransition) return;
@@ -781,17 +792,40 @@
     sfx.init();
 
     const pos = getPointerPos(e), tower = findTowerAt(pos);
-    if (!tower) { clearHighlights(); state.selectedTower = null; hideTooltip(); return; }
+    dragHasMoved = false;
+
+    if (!tower) {
+      clearHighlights();
+      state.selectedTower = null;
+      hideTooltip();
+      return;
+    }
+
+    // Tap-to-Merge: If user taps another matching tower while one is selected
+    if (state.selectedTower && state.selectedTower !== tower) {
+      if (tryMerge(tower, state.selectedTower)) {
+        clearHighlights();
+        state.selectedTower = null;
+        hideTooltip();
+        return;
+      }
+    }
 
     if (e.pointerId !== undefined && canvas.setPointerCapture) {
       try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
     }
 
     state.draggingTower = tower;
-    state.dragOffsetX = pos.x - tower.x; state.dragOffsetY = pos.y - tower.y;
-    state.dragX = tower.x; state.dragY = tower.y;
-    state.dragStartX = pos.x; state.dragStartY = pos.y;
-    tower.selected = true; state.selectedTower = tower;
+    state.dragOffsetX = pos.x - tower.x;
+    state.dragOffsetY = pos.y - tower.y;
+    state.dragX = tower.x;
+    state.dragY = tower.y;
+    state.dragStartX = pos.x;
+    state.dragStartY = pos.y;
+
+    clearHighlights();
+    tower.selected = true;
+    state.selectedTower = tower;
 
     for (const t of state.towers) {
       if (t !== tower && !t.evolved && !tower.evolved && t.type === tower.type && t.level === tower.level && t.level < CONFIG.MERGE_MAX_LEVEL) {
@@ -807,13 +841,16 @@
       if (state.gameOver) return;
       if (e.pointerType === 'mouse' || (!e.touches && e.clientX !== undefined)) {
         const t = findTowerAt(getPointerPos(e));
-        if (t) { showTooltip(t, e); t.selected = true; state.selectedTower = t; }
-        else if (state.selectedTower) { state.selectedTower.selected = false; state.selectedTower = null; hideTooltip(); }
+        if (t) showTooltip(t, e); else hideTooltip();
       }
       return;
     }
+
     if (e.cancelable && e.preventDefault) e.preventDefault();
     const pos = getPointerPos(e);
+    const moved = Math.hypot(pos.x - state.dragStartX, pos.y - state.dragStartY);
+    if (moved > 10) dragHasMoved = true;
+
     state.dragX = pos.x - state.dragOffsetX;
     state.dragY = pos.y - state.dragOffsetY;
   }
@@ -825,19 +862,29 @@
       try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     }
 
-    const cur = getPointerPos(e), pos = { x: state.dragX, y: state.dragY };
-    const moved = Math.hypot((state.dragStartX || 0) - (cur.x || pos.x), (state.dragStartY || 0) - (cur.y || pos.y));
-    const wasClick = moved < 18;
+    const cur = getPointerPos(e), dropPos = { x: state.dragX, y: state.dragY };
 
-    if (wasClick && state.draggingTower.level >= 5 && !state.draggingTower.evolved) {
-      openEvolutionPanel(state.draggingTower);
+    if (dragHasMoved) {
+      // Drag-and-drop: check both visual dragged position and finger release position
+      const target = findTowerAt(dropPos, state.draggingTower) || findTowerAt(cur, state.draggingTower);
+      if (target && tryMerge(target, state.draggingTower)) {
+        clearHighlights();
+        state.selectedTower = null;
+      } else {
+        state.selectedTower = state.draggingTower;
+      }
     } else {
-      const target = findTowerAt(pos, state.draggingTower);
-      if (target) tryMerge(target, state.draggingTower);
+      // Tap selection / Evolution check
+      if (state.draggingTower.level >= 5 && !state.draggingTower.evolved) {
+        openEvolutionPanel(state.draggingTower);
+        clearHighlights();
+        state.selectedTower = null;
+      } else {
+        state.selectedTower = state.draggingTower;
+      }
     }
 
-    clearHighlights();
-    state.draggingTower = null; state.selectedTower = null;
+    state.draggingTower = null;
     canvas.style.cursor = 'crosshair';
     hideTooltip();
   }
@@ -853,6 +900,7 @@
     document.getElementById('evo-desc').textContent = `Select an advanced form for this Level ${tower.level} ${TOWER_TYPES[tower.type].name} program.`;
     document.getElementById('evo-overlay').classList.remove('hidden');
   }
+  
 
   function applyEvolution(index) {
     const tower = state.evoTarget, opts = tower ? EVOLUTIONS[tower.type] : null;
