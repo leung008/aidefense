@@ -9,6 +9,11 @@
 </head>
 <body>
   <div id="game-container">
+    <!-- Cyber CRT Scanline & Vignette Effect -->
+    <div class="screen-scanlines"></div>
+    <div class="screen-vignette"></div>
+
+    <!-- HUD -->
     <div id="hud">
       <div class="stat-group">
         <div class="stat" id="gold-stat">
@@ -21,7 +26,7 @@
         </div>
         <div class="stat" id="wave-stat">
           <span class="label">WAVE</span>
-          <span class="value" id="wave">0</span>
+          <span class="value" id="wave">0<span class="max-wave">/20</span></span>
         </div>
         <div class="stat" id="score-stat">
           <span class="label">SCORE</span>
@@ -29,11 +34,11 @@
         </div>
       </div>
       <div class="controls">
-        <button id="summon-btn" class="cyber-btn">
-          <span class="btn-text">SUMMON TOWER</span>
+        <button id="summon-btn" class="cyber-btn" title="Deploy a random program onto an open node">
+          <span class="btn-text">SUMMON PROGRAM</span>
           <span class="btn-cost">50¢</span>
         </button>
-        <button id="start-wave-btn" class="cyber-btn accent">
+        <button id="start-wave-btn" class="cyber-btn accent" title="Launch the next viral wave">
           <span class="btn-text">START WAVE</span>
         </button>
         <label class="cyber-check" title="Automatically start the next wave after clear">
@@ -41,37 +46,131 @@
           <span class="check-box"></span>
           <span class="check-label">AUTO WAVE</span>
         </label>
+        <button id="audio-toggle-btn" class="cyber-btn icon-btn" title="Toggle Sound FX">
+          <span class="btn-text" id="audio-icon">🔊 SFX ON</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Boss Health Bar (Top of Screen, visible during boss fights) -->
+    <div id="boss-bar-container" class="hidden">
+      <div class="boss-label-row">
+        <span class="boss-tag">⚠️ APEX THREAT DETECTED</span>
+        <span id="boss-name">TITAN ZERO</span>
+        <span id="boss-hp-text">100%</span>
+      </div>
+      <div class="boss-hp-track">
+        <div id="boss-hp-fill" style="width: 100%;"></div>
       </div>
     </div>
 
     <canvas id="game-canvas"></canvas>
 
-    <div id="message-overlay" class="hidden">
-      <div class="message-box">
-        <h2 id="message-title">LAST DATACENTER</h2>
-        <p id="message-text">
-          A new strain of AI virus is spreading across the net.<br>
-          This is humanity’s final Data Core — the last safe node left.<br><br>
-          Deploy <strong>Antivirus Programs</strong> along the data stream.<br>
-          <strong>Drag</strong> matching programs onto each other to merge &amp; level up.<br>
-          At <strong>Level 5</strong>, click a program to choose a powerful Evolution form.<br>
-          Stop the viral swarms. Protect the Core.
-        </p>
-        <button id="message-ok" class="cyber-btn accent">ENGAGE</button>
+    <!-- Stage Fade & Transition Overlay -->
+    <div id="stage-transition-overlay" class="hidden">
+      <div class="stage-transition-content">
+        <div class="stage-wipe-line"></div>
+        <h2 id="stage-trans-title">WAVE 1 PURGED</h2>
+        <p id="stage-trans-sub">NODE DEFENSE SYNCHRONIZING...</p>
+        <div class="stage-stats-preview" id="stage-stats-preview">+30¢ RECHARGE BONUS</div>
       </div>
     </div>
 
+    <!-- Boss Warning Overlay -->
+    <div id="boss-warning-overlay" class="hidden">
+      <div class="hazard-stripes top"></div>
+      <div class="boss-warning-content">
+        <div class="warning-icon-pulse">⚠️</div>
+        <h1 class="warning-glitch" data-text="THREAT LEVEL CRITICAL">THREAT LEVEL CRITICAL</h1>
+        <div class="warning-banner-sub">INCOMING APEX VIRAL ENTITY</div>
+        <div class="boss-title-callout" id="warning-boss-name">NEXUS OVERLORD</div>
+        <div class="boss-warning-countdown">EMERGENCY PROTOCOLS ENGAGED</div>
+      </div>
+      <div class="hazard-stripes bottom"></div>
+    </div>
+
+    <!-- Title Screen -->
+    <div id="title-screen-overlay">
+      <div class="title-backdrop-glow"></div>
+      <div class="title-panel">
+        <div class="title-badge">NODE: SECTOR-07 // MILITARY ENCRYPTION</div>
+        <h1 class="cyber-title">
+          <span class="title-glow">LAST DATACENTER</span>
+          <span class="title-sub">CYBER DICE DEFENSE</span>
+        </h1>
+        <div class="terminal-box">
+          <div class="terminal-bar">
+            <span class="term-dot red"></span>
+            <span class="term-dot yellow"></span>
+            <span class="term-dot green"></span>
+            <span class="term-title">MISSION_BRIEFING.LOG</span>
+          </div>
+          <p class="terminal-text">
+            &gt; A catastrophic AI strain has compromised all continental networks.<br>
+            &gt; You are station commander of the <strong class="text-cyan">Final Primary Core</strong>.<br>
+            &gt; Deploy specialized Antivirus nodes to neutralize malware streams.<br>
+            &gt; Merge matching algorithms to elevate defensive firepower.<br>
+            &gt; Prepare for <strong class="text-magenta">Apex Boss Entities</strong> every 5 waves.
+          </p>
+        </div>
+
+        <div class="title-actions">
+          <button id="title-start-btn" class="cyber-btn accent large-btn">
+            <span class="btn-text">INITIALIZE DEFENSE</span>
+            <span class="btn-subtext">CLICK TO ENGAGE &amp; ENABLE AUDIO</span>
+          </button>
+          <button id="title-guide-btn" class="cyber-btn">
+            <span class="btn-text">DEFENSE MANUAL</span>
+          </button>
+        </div>
+
+        <!-- Manual Modal / Accordion -->
+        <div id="guide-modal" class="hidden">
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h3 class="text-cyan">1. SUMMON &amp; DEPLOY</h3>
+              <p>Spend 50¢ to compile a randomized Lv.1 Antivirus Program (Plasma, Missile, or Laser) onto an open node slot.</p>
+            </div>
+            <div class="guide-card">
+              <h3 class="text-magenta">2. MERGE UPGRADE</h3>
+              <p>Drag any program onto another of the exact <strong>same type and level</strong> to merge up to Level 6.</p>
+            </div>
+            <div class="guide-card">
+              <h3 class="text-yellow">3. LEVEL 5 EVOLUTIONS</h3>
+              <p>Click a Level 5 unit to branch into game-changing evolved archetypes: Dual/Pierce Plasma, Cluster/Swarm Missiles, or Heavy/Spread Lasers.</p>
+            </div>
+            <div class="guide-card">
+              <h3 class="text-red">4. APEX BOSS WAVES</h3>
+              <p>Massive viral constructs breach the perimeter on Waves 5, 10, 15, and 20. Listen for the alarm sirens!</p>
+            </div>
+          </div>
+          <button id="close-guide-btn" class="cyber-btn small-btn" style="margin-top: 15px;">CLOSE MANUAL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Overlay -->
     <div id="game-over-overlay" class="hidden">
       <div class="message-box">
         <h2 id="go-title">CORE BREACHED</h2>
-        <p id="go-text">Score: 0</p>
-        <button id="restart-btn" class="cyber-btn accent">REBOOT</button>
+        <div id="go-sub" class="go-sub">SECTOR WIPED</div>
+        <div class="go-stats">
+          <div class="go-stat-item">
+            <span class="go-stat-lbl">FINAL SCORE</span>
+            <span class="go-stat-val" id="go-score">0</span>
+          </div>
+          <div class="go-stat-item">
+            <span class="go-stat-lbl">WAVES CLEARED</span>
+            <span class="go-stat-val" id="go-wave">0/20</span>
+          </div>
+        </div>
+        <button id="restart-btn" class="cyber-btn accent">REBOOT SYSTEM</button>
       </div>
     </div>
 
     <div id="tooltip" class="hidden"></div>
 
-    <!-- Evolution choice panel -->
+    <!-- Evolution Choice Panel -->
     <div id="evo-overlay" class="hidden">
       <div class="evo-box">
         <h2>EVOLUTION PROTOCOL</h2>
