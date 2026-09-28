@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Last Datacenter — Cyber Dice Defense</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -119,6 +119,17 @@
           </p>
         </div>
 
+        <!-- Active Squad Tray on Title Screen -->
+        <div class="title-squad-tray">
+          <div class="squad-tray-header">
+            <span class="squad-tray-label">ACTIVE BATTLE SQUAD (4 SLOTS)</span>
+            <button id="title-team-btn" class="cyber-btn small-btn squad-edit-btn">EDIT SQUAD</button>
+          </div>
+          <div class="squad-chips-row" id="title-squad-chips">
+            <!-- Dynamically populated 4 active programs -->
+          </div>
+        </div>
+
         <div class="title-actions">
           <button id="title-start-btn" class="cyber-btn accent large-btn">
             <span class="btn-text">INITIALIZE DEFENSE</span>
@@ -134,15 +145,15 @@
           <div class="guide-grid">
             <div class="guide-card">
               <h3 class="text-cyan">1. SUMMON &amp; DEPLOY</h3>
-              <p>Spend 50¢ to compile a randomized Lv.1 Antivirus Program (Plasma, Missile, or Laser) onto an open node slot.</p>
+              <p>Spend 50¢ to compile a randomized Lv.1 Antivirus Program (from your 4 equipped squad members) onto an open node.</p>
             </div>
             <div class="guide-card">
               <h3 class="text-magenta">2. MERGE UPGRADE</h3>
-              <p>Drag any program onto another of the exact <strong>same type and level</strong> to merge up to Level 6.</p>
+              <p>Drag or tap any program onto another of the exact <strong>same type and level</strong> to merge up to Level 6.</p>
             </div>
             <div class="guide-card">
               <h3 class="text-yellow">3. LEVEL 5 EVOLUTIONS</h3>
-              <p>Click a Level 5 unit to branch into game-changing evolved archetypes: Dual/Pierce Plasma, Cluster/Swarm Missiles, or Heavy/Spread Lasers.</p>
+              <p>Click or tap an unevolved Level 5 unit to branch into specialized combat forms.</p>
             </div>
             <div class="guide-card">
               <h3 class="text-red">4. APEX BOSS WAVES</h3>
@@ -174,6 +185,42 @@
     </div>
 
     <div id="tooltip" class="hidden"></div>
+
+    <!-- Team Edit / Squad Builder Modal -->
+    <div id="team-modal" class="hidden">
+      <div class="team-box">
+        <div class="team-header">
+          <h2>ANTIVIRUS SQUAD PROTOCOL</h2>
+          <p>Deploy a tactical loadout of exactly <strong>4 Programs</strong> into the Data Core network.</p>
+        </div>
+
+        <div class="active-squad-section">
+          <div class="section-label-row">
+            <span class="section-label">SELECTED BATTLE SQUAD (<span id="squad-count-text">4/4</span>)</span>
+            <span class="section-hint text-cyan">TAP EQUIPPED PROGRAM TO REMOVE</span>
+          </div>
+          <div class="active-squad-slots" id="modal-squad-slots">
+            <!-- 4 active slots rendered here -->
+          </div>
+        </div>
+
+        <div class="roster-section">
+          <div class="section-label-row">
+            <span class="section-label">AVAILABLE ALGORITHMS (10 ARCHETYPES)</span>
+            <span class="section-hint">TAP TO EQUIP OR SWAP</span>
+          </div>
+          <div class="roster-grid" id="modal-roster-grid">
+            <!-- 10 tower archetype cards -->
+          </div>
+        </div>
+
+        <div class="team-actions">
+          <button id="team-confirm-btn" class="cyber-btn accent">CONFIRM LOADOUT</button>
+          <button id="team-preset-btn" class="cyber-btn">DEFAULT SQUAD</button>
+          <button id="team-cancel-btn" class="cyber-btn">CANCEL</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Evolution Choice Panel -->
     <div id="evo-overlay" class="hidden">
