@@ -41,6 +41,9 @@
         <button id="start-wave-btn" class="cyber-btn accent" title="Launch the next viral wave">
           <span class="btn-text">START WAVE</span>
         </button>
+        <button id="auto-merge-btn" class="cyber-btn" title="Auto merge matching towers (excluding Lv.5/evolutions)">
+          <span class="btn-text">AUTO MERGE</span>
+        </button>
         <label class="cyber-check" title="Automatically start the next wave after clear">
           <input type="checkbox" id="auto-wave-check">
           <span class="check-box"></span>
@@ -145,19 +148,19 @@
           <div class="guide-grid">
             <div class="guide-card">
               <h3 class="text-cyan">1. SUMMON &amp; DEPLOY</h3>
-              <p>Spend 50¢ to compile a randomized Lv.1 Antivirus Program (from your 4 equipped squad members) onto an open node.</p>
+              <p>Spend credits (50¢ + 10¢/summon) to compile a randomized Lv.1 Antivirus Program (Plasma, Missile, or Laser) onto an open node slot.</p>
             </div>
             <div class="guide-card">
               <h3 class="text-magenta">2. MERGE UPGRADE</h3>
-              <p>Drag or tap any program onto another of the exact <strong>same type and level</strong> to merge up to Level 6.</p>
+              <p>Drag or tap matching programs to merge up to Lv.6, or use <strong>AUTO MERGE</strong> (Lv.5 programs are preserved for manual evolution).</p>
             </div>
             <div class="guide-card">
               <h3 class="text-yellow">3. LEVEL 5 EVOLUTIONS</h3>
-              <p>Click or tap an unevolved Level 5 unit to branch into specialized combat forms.</p>
+              <p>Click a Level 5 unit to branch into game-changing evolved archetypes: Dual/Pierce Plasma, Cluster/Swarm Missiles, or Heavy/Spread Lasers.</p>
             </div>
             <div class="guide-card">
               <h3 class="text-red">4. APEX BOSS WAVES</h3>
-              <p>Massive viral constructs breach the perimeter on Waves 5, 10, 15, and 20. Listen for the alarm sirens!</p>
+              <p>Massive viral constructs breach on Waves 5, 10, 15, and 20. Destroying an Apex Boss reconfigures network topology and reallocates all nodes!</p>
             </div>
           </div>
           <button id="close-guide-btn" class="cyber-btn small-btn" style="margin-top: 15px;">CLOSE MANUAL</button>
@@ -186,7 +189,7 @@
 
     <div id="tooltip" class="hidden"></div>
 
-    <!-- Team Edit / Squad Builder Modal -->
+        <!-- Team Edit / Squad Builder Modal -->
     <div id="team-modal" class="hidden">
       <div class="team-box">
         <div class="team-header">
