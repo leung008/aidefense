@@ -921,7 +921,7 @@ body {
   .controls {
     width: 100%;
     display: grid;
-    grid-template-columns: 2fr 1.8fr 1.2fr 1.3fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 5px;
   }
 
