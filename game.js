@@ -6,6 +6,8 @@
 
   // -------------------- CONFIG & CONSTANTS --------------------
   const CONFIG = {
+    SUMMON_COST_BASE: 50,
+    SUMMON_COST_STEP: 10,
     SUMMON_COST: 50,
     START_GOLD: 300,
     START_LIVES: 20,
@@ -25,12 +27,12 @@
     }
   };
 
-  const TOWER_TYPES = {
+    const TOWER_TYPES = {
     plasma:    { name: 'Plasma',       role: 'Direct DPS',      color: '#00f0ff', colorDim: '#0088aa', damageMult: 1.0,  rangeMult: 1.0,  rateMult: 1.2, projectileSpeed: 320, aoe: false, desc: 'Balanced single-target energy bolts.' },
     missile:   { name: 'Missile',      role: 'Area Blast',      color: '#ff00aa', colorDim: '#aa0066', damageMult: 1.6,  rangeMult: 1.15, rateMult: 0.6, projectileSpeed: 220, aoe: true, aoeRadius: 45, desc: 'Explosive rockets with splash damage.' },
     laser:     { name: 'Laser',        role: 'Beam Sniper',     color: '#f0ff00', colorDim: '#aaaa00', damageMult: 0.7,  rangeMult: 1.3,  rateMult: 2.0, projectileSpeed: 500, aoe: false, desc: 'Ultra-rapid piercing laser beams.' },
     buffer:    { name: 'Overclock',    role: 'Power-Up Aura',   color: '#c084fc', colorDim: '#7e22ce', damageMult: 0.0,  rangeMult: 1.25, rateMult: 1.0, isBuffer: true, buffDmg: 0.35, buffRate: 0.25, desc: 'Aura buffs damage & attack rate of nearby towers.' },
-    miner:     { name: 'Crypto Miner', role: 'Economy Engine',  color: '#10b981', colorDim: '#047857', damageMult: 0.0,  rangeMult: 0.8,  rateMult: 1.0, isMiner: true, mineInterval: 4.0, mineBase: 12, desc: 'Harvests credits (+12¢ + 4¢/lvl) every 4 seconds.' },
+    miner:     { name: 'Crypto Miner', role: 'Economy Engine',  color: '#10b981', colorDim: '#047857', damageMult: 0.0,  rangeMult: 0.8,  rateMult: 1.0, isMiner: true, mineInterval: 6.0, mineBase: 6, desc: 'Harvests credits (+6¢ + 2¢/lvl) every 6s while mobs active.' },
     tesla:     { name: 'Arc Welder',   role: 'Close Melee DPS', color: '#38bdf8', colorDim: '#0284c7', damageMult: 3.4,  rangeMult: 0.65, rateMult: 2.4, isTesla: true, desc: 'Devastating short-range continuous electric arc.' },
     frost:     { name: 'Cryo Coolant', role: 'Crowd Control',   color: '#67e8f9', colorDim: '#0891b2', damageMult: 0.8,  rangeMult: 1.05, rateMult: 1.1, projectileSpeed: 280, isFrost: true, slowMult: 0.55, desc: 'Chills targets, slowing speed by 45%.' },
     railgun:   { name: 'Railgun',      role: 'Kinetic Piercer', color: '#f97316', colorDim: '#c2410c', damageMult: 3.6,  rangeMult: 1.7,  rateMult: 0.4, projectileSpeed: 750, isPierce: true, desc: 'Extreme-range hyper-velocity slug pierces lines.' },
@@ -39,7 +41,7 @@
   };
   const ALL_TYPE_KEYS = Object.keys(TOWER_TYPES);
 
-  const EVOLUTIONS = {
+    const EVOLUTIONS = {
     plasma: [
       { key: 'dual',   name: 'DUAL PLASMA',   detail: 'Fires 2 parallel shots',      color: '#00f0ff', damageMult: 1.15, rateMult: 1.1,  rangeMult: 1.05, multiShot: 2, spread: 0.12 },
       { key: 'pierce', name: 'PIERCE PLASMA', detail: 'Shots pierce through viruses',color: '#66ffff', damageMult: 1.35, rateMult: 0.95, rangeMult: 1.2,  pierce: true }
@@ -57,8 +59,8 @@
       { key: 'global', name: 'GLOBAL CLOCK',    detail: 'Aura covers entire datacenter node', color: '#c084fc', rangeMult: 3.5, buffDmgBoost: 0.9 }
     ],
     miner: [
-      { key: 'quantum',name: 'QUANTUM HASH',   detail: 'Yields +45¢ every 3 seconds', color: '#34d399', mineInterval: 3.0, mineBonus: 25 },
-      { key: 'surge',  name: 'SURGE MINER',    detail: 'Grants +120¢ bonus on every wave clear', color: '#10b981', waveBonus: 120 }
+      { key: 'quantum',name: 'QUANTUM HASH',   detail: 'Yields +18¢ every 4.5 seconds', color: '#34d399', mineInterval: 4.5, mineBonus: 12 },
+      { key: 'surge',  name: 'SURGE MINER',    detail: 'Grants +60¢ bonus on every wave clear', color: '#10b981', waveBonus: 60 }
     ],
     tesla: [
       { key: 'chain',  name: 'CHAIN VOLT',     detail: 'Electric arcs jump to 3 additional targets', color: '#38bdf8', damageMult: 1.4, chainTargets: 3 },
@@ -170,6 +172,7 @@
     lives: CONFIG.START_LIVES,
     score: 0,
     wave: 0,
+    summonCount: 0,
     running: false,
     gameOver: false,
     selectedTower: null,
@@ -200,6 +203,10 @@
     inTransition: false
   };
 
+  function getSummonCost() {
+    return CONFIG.SUMMON_COST_BASE + (state.summonCount || 0) * CONFIG.SUMMON_COST_STEP;
+  }
+
   // -------------------- MAP & SPOT GENERATION --------------------
   function generatePath() {
     const margin = 50, segments = 8, pts = [];
@@ -209,11 +216,17 @@
       // Portrait Stream: Flow from top to bottom
       let y = margin;
       const dy = (H - margin * 2) / segments;
-      pts.push({ x: W * 0.5, y });
+      const startX = W * (0.35 + Math.random() * 0.3);
+      pts.push({ x: startX, y });
+      const freq = 1.0 + Math.random() * 1.2;
+      const phaseInit = Math.random() * Math.PI * 2;
+      const ampBase = W * (0.24 + Math.random() * 0.12);
+
       for (let i = 1; i <= segments; i++) {
         y = margin + dy * i;
-        const amp = W * 0.32, phase = i % 2 === 0 ? 1 : -1;
-        let x = W * 0.5 + phase * amp * (0.65 + Math.sin(i * 1.3) * 0.35);
+        const phase = i % 2 === 0 ? 1 : -1;
+        const waveOffset = Math.sin(i * freq + phaseInit) * (ampBase * 0.45);
+        let x = W * 0.5 + phase * (ampBase * 0.65) + waveOffset;
         x = Math.max(margin + 15, Math.min(W - margin - 15, x));
         pts.push({ x, y });
       }
@@ -221,11 +234,17 @@
       // Landscape Stream: Flow from left to right
       let x = margin;
       const dx = (W - margin * 2) / segments;
-      pts.push({ x, y: H * 0.5 });
+      const startY = H * (0.35 + Math.random() * 0.3);
+      pts.push({ x, y: startY });
+      const freq = 1.0 + Math.random() * 1.2;
+      const phaseInit = Math.random() * Math.PI * 2;
+      const ampBase = H * (0.22 + Math.random() * 0.12);
+
       for (let i = 1; i <= segments; i++) {
         x = margin + dx * i;
-        const amp = H * 0.28, phase = i % 2 === 0 ? 1 : -1;
-        let y = H * 0.5 + phase * amp * (0.6 + Math.sin(i * 1.3) * 0.4);
+        const phase = i % 2 === 0 ? 1 : -1;
+        const waveOffset = Math.sin(i * freq + phaseInit) * (ampBase * 0.45);
+        let y = H * 0.5 + phase * (ampBase * 0.6) + waveOffset;
         y = Math.max(margin + 20, Math.min(H - margin - 20, y));
         pts.push({ x, y });
       }
@@ -234,8 +253,8 @@
     const smooth = [];
     for (let i = 0; i < pts.length - 1; i++) {
       smooth.push(pts[i], {
-        x: (pts[i].x + pts[i + 1].x) / 2 + (isPortrait ? (Math.random() - 0.5) * 12 : 0),
-        y: (pts[i].y + pts[i + 1].y) / 2 + (!isPortrait ? (Math.random() - 0.5) * 12 : 0)
+        x: (pts[i].x + pts[i + 1].x) / 2 + (isPortrait ? (Math.random() - 0.5) * 16 : 0),
+        y: (pts[i].y + pts[i + 1].y) / 2 + (!isPortrait ? (Math.random() - 0.5) * 16 : 0)
       });
     }
     smooth.push(pts[pts.length - 1]);
@@ -265,6 +284,30 @@
       [spots[i], spots[j]] = [spots[j], spots[i]];
     }
     state.placementSpots = spots;
+  }
+
+  function reallocateTowers() {
+    if (state.towers.length === 0 || state.placementSpots.length === 0) return;
+    for (const s of state.placementSpots) s.occupied = false;
+    const availableSpots = [...state.placementSpots].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < state.towers.length; i++) {
+      const tower = state.towers[i];
+      const spot = availableSpots[i % availableSpots.length];
+      tower.x = spot.x;
+      tower.y = spot.y;
+      tower.spot = spot;
+      spot.occupied = true;
+      spawnParticles(tower.x, tower.y, tower.stats.color, 18);
+    }
+    sfx.playDeploy();
+  }
+
+  function reconfigureMapAndTowers() {
+    state.draggingTower = null;
+    generatePath();
+    generatePlacementSpots();
+    reallocateTowers();
+    spawnFloatingText(W / 2, H * 0.45, 'SECTOR RECONFIGURED!', '#00f0ff');
   }
 
   // -------------------- UTILITIES --------------------
@@ -330,13 +373,15 @@
         return;
       }
 
-      // Economy Tower: Crypto Miner
+      // Economy Tower: Crypto Miner - Only generates money when mobs are actively on stage
       if (this.type === 'miner') {
+        const hasMobs = state.waveActive && state.enemies.some(e => e.alive && e.hp > 0);
+        if (!hasMobs) return;
         this.mineTimer = (this.mineTimer || 0) + dt;
-        const interval = (this.evoData && this.evoData.mineInterval) || 4.0;
+        const interval = (this.evoData && this.evoData.mineInterval) || (this.stats.mineInterval || 6.0);
         if (this.mineTimer >= interval) {
           this.mineTimer = 0;
-          const payout = (this.stats.mineBase || 12) + this.level * 4 + ((this.evoData && this.evoData.mineBonus) || 0);
+          const payout = (this.stats.mineBase || 6) + (this.level - 1) * 2 + ((this.evoData && this.evoData.mineBonus) || 0);
           state.gold += payout;
           state.score += payout * 5;
           spawnFloatingText(this.x, this.y - 20, `+${payout}¢`, '#10b981');
@@ -507,7 +552,7 @@
     }
   }
 
- class Enemy {
+  class Enemy {
     constructor(wave, type = 'drone', bossData = null) {
       this.pathIndex = 0; this.progress = 0;
       this.x = state.path[0].x; this.y = state.path[0].y;
@@ -570,6 +615,14 @@
           sfx.playExplosion(true); hideBossBar(); state.activeBoss = null;
           spawnParticles(this.x, this.y, this.color, 45, 60);
           spawnFloatingText(this.x, this.y, `BOSS DESTROYED! +${this.reward}¢`, '#f0ff00');
+          // Purge any remaining escorts so wave immediately concludes
+          for (const en of state.enemies) {
+            if (en.alive && en !== this) {
+              en.alive = false;
+              spawnParticles(en.x, en.y, '#00f0ff', 8);
+            }
+          }
+          if (state.currentWaveData) state.currentWaveData.enemies = [];
         } else {
           sfx.playExplosion(false); spawnParticles(this.x, this.y, this.color, 12);
           spawnFloatingText(this.x, this.y, `+${this.reward}¢`, '#00ff88');
@@ -833,29 +886,52 @@
 
   function checkWaveComplete() {
     if (!state.waveActive) return;
-    if (!state.enemies.some(e => e.alive) && state.currentWaveData.enemies.length === 0) {
+    if (!state.enemies.some(e => e.alive) && (!state.currentWaveData || state.currentWaveData.enemies.length === 0)) {
       state.waveActive = false;
+      const isBossWave = !!CONFIG.BOSS_WAVES[state.wave];
       const bonus = 25 + state.wave * 5;
       state.gold += bonus;
+
+      // Surge Miner evolution bonus on wave clear
+      for (const t of state.towers) {
+        if (t.type === 'miner' && t.evolved && t.evoData && t.evoData.waveBonus) {
+          state.gold += t.evoData.waveBonus;
+          spawnFloatingText(t.x, t.y - 25, `+${t.evoData.waveBonus}¢ SURGE`, '#10b981');
+        }
+      }
+
       updateHUD();
       sfx.playStageClear();
       if (state.wave >= CONFIG.MAX_WAVE) { endGame(true); return; }
-      triggerStageTransition(state.wave, bonus);
+      triggerStageTransition(state.wave, bonus, isBossWave);
     }
   }
 
-  function triggerStageTransition(clearedWave, bonus) {
+  function triggerStageTransition(clearedWave, bonus, isBossWave = false) {
     state.inTransition = true;
     const overlay = document.getElementById('stage-transition-overlay');
-    document.getElementById('stage-trans-title').textContent = `WAVE ${clearedWave} PURGED`;
+    document.getElementById('stage-trans-title').textContent = isBossWave ? `APEX BOSS PURGED` : `WAVE ${clearedWave} PURGED`;
     const nextIsBoss = !!CONFIG.BOSS_WAVES[clearedWave + 1];
     const sub = document.getElementById('stage-trans-sub');
-    sub.textContent = nextIsBoss ? '⚠️ CRITICAL: APEX SIGNATURE DETECTED IN NEXT SECTOR' : 'DATA INTEGRITY SECURED // NODE RECHARGED';
-    sub.style.color = nextIsBoss ? '#ff2244' : '#f0ff00';
+    if (isBossWave) {
+      sub.textContent = 'TOPOLOGY RECONFIGURED // DEFENSE NODES REALLOCATED';
+      sub.style.color = '#00f0ff';
+    } else {
+      sub.textContent = nextIsBoss ? '⚠️ CRITICAL: APEX SIGNATURE DETECTED IN NEXT SECTOR' : 'DATA INTEGRITY SECURED // NODE RECHARGED';
+      sub.style.color = nextIsBoss ? '#ff2244' : '#f0ff00';
+    }
     document.getElementById('stage-stats-preview').textContent = `+${bonus}¢ RECHARGE BONUS`;
 
     overlay.classList.remove('hidden');
     setTimeout(() => overlay.classList.add('show'), 20);
+
+    // Reconfigure map route and randomly reallocate towers upon defeating a stage boss
+    if (isBossWave) {
+      setTimeout(() => {
+        reconfigureMapAndTowers();
+      }, 350);
+    }
+
     setTimeout(() => {
       overlay.classList.remove('show');
       setTimeout(() => {
@@ -865,12 +941,13 @@
         const autoCheck = document.getElementById('auto-wave-check');
         if (autoCheck && autoCheck.checked && !state.gameOver && !state.waveActive) startWave();
       }, 400);
-    }, 1600);
+    }, isBossWave ? 2200 : 1600);
   }
 
   // -------------------- SUMMON & MERGE --------------------
   function summonTower() {
-    if (state.gold < CONFIG.SUMMON_COST || state.gameOver || state.inTransition) return;
+    const cost = getSummonCost();
+    if (state.gold < cost || state.gameOver || state.inTransition) return;
     const free = state.placementSpots.filter(s => !s.occupied);
     if (free.length === 0) { spawnFloatingText(W / 2, 80, 'NO SPACE', '#ff6600'); return; }
 
@@ -879,7 +956,8 @@
     const tower = new Tower(spot.x, spot.y, type, 1);
     tower.spot = spot; spot.occupied = true;
     state.towers.push(tower);
-    state.gold = Math.max(0, state.gold - CONFIG.SUMMON_COST);
+    state.gold = Math.max(0, state.gold - cost);
+    state.summonCount = (state.summonCount || 0) + 1;
     sfx.playDeploy();
     spawnParticles(spot.x, spot.y, TOWER_TYPES[type].color, 10);
     spawnFloatingText(spot.x, spot.y - 20, 'DEPLOYED', TOWER_TYPES[type].color);
@@ -901,6 +979,43 @@
     return true;
   }
 
+  function autoUpgrade() {
+    if (state.gameOver || !state.running || state.inTransition) return;
+    let mergedCount = 0;
+    let foundMerge = true;
+    let safetyCounter = 0;
+
+    while (foundMerge && safetyCounter < 100) {
+      safetyCounter++;
+      foundMerge = false;
+      // Filter towers: unevolved and level < 5 (Evolution will not upgrade automatically)
+      const candidates = state.towers.filter(t => !t.evolved && t.level < 5);
+      candidates.sort((a, b) => a.level - b.level);
+
+      for (let i = 0; i < candidates.length; i++) {
+        for (let j = i + 1; j < candidates.length; j++) {
+          const t1 = candidates[i], t2 = candidates[j];
+          if (t1.type === t2.type && t1.level === t2.level) {
+            if (tryMerge(t1, t2)) {
+              mergedCount++;
+              foundMerge = true;
+              break;
+            }
+          }
+        }
+        if (foundMerge) break;
+      }
+    }
+
+    if (mergedCount > 0) {
+      sfx.playMerge();
+      spawnFloatingText(W / 2, H * 0.35, `AUTO MERGED ${mergedCount} PROGRAM${mergedCount > 1 ? 'S' : ''}!`, '#00f0ff');
+      updateHUD();
+    } else {
+      spawnFloatingText(W / 2, H * 0.35, 'NO MERGEABLE UNITS (< LV.5)', '#ff6600');
+    }
+  }
+
   function clearHighlights() {
     for (const t of state.towers) { t.mergeHighlight = false; t.selected = false; }
   }
@@ -915,7 +1030,8 @@
     }
     return best;
   }
-// -------------------- TOUCH & POINTER INPUT (DRAG & TAP TO MERGE) --------------------
+
+  // -------------------- TOUCH & POINTER INPUT (DRAG & TAP TO MERGE) --------------------
   function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
     let cx = e.clientX, cy = e.clientY;
@@ -1189,6 +1305,7 @@
     requestAnimationFrame(loop);
   }
 
+  
   // ============================================================
   // TEAM BUILDER / SQUAD LOADOUT SYSTEM
   // ============================================================
@@ -1315,11 +1432,14 @@
 
   // -------------------- UI & LIFECYCLE --------------------
   function updateHUD() {
+    const cost = getSummonCost();
     document.getElementById('gold').textContent = state.gold;
     document.getElementById('lives').textContent = state.lives;
     document.getElementById('wave').textContent = state.wave;
     document.getElementById('score').textContent = state.score;
-    document.getElementById('summon-btn').disabled = state.gold < CONFIG.SUMMON_COST || state.gameOver || state.inTransition;
+    const costEl = document.querySelector('#summon-btn .btn-cost');
+    if (costEl) costEl.textContent = `${cost}¢`;
+    document.getElementById('summon-btn').disabled = state.gold < cost || state.gameOver || state.inTransition;
   }
 
   function endGame(won) {
@@ -1336,7 +1456,7 @@
 
   function restart() {
     state.gold = CONFIG.START_GOLD; state.lives = CONFIG.START_LIVES;
-    state.score = 0; state.wave = 0; state.running = true; state.gameOver = false;
+    state.score = 0; state.wave = 0; state.summonCount = 0; state.running = true; state.gameOver = false;
     state.selectedTower = null; state.draggingTower = null;
     state.towers = []; state.enemies = []; state.projectiles = [];
     state.particles = []; state.floatingTexts = [];
@@ -1397,10 +1517,12 @@
 
     document.getElementById('summon-btn').addEventListener('click', summonTower);
     document.getElementById('start-wave-btn').addEventListener('click', startWave);
+    const autoMergeBtn = document.getElementById('auto-merge-btn');
+    if (autoMergeBtn) autoMergeBtn.addEventListener('click', autoUpgrade);
     document.getElementById('restart-btn').addEventListener('click', restart);
     document.getElementById('audio-toggle-btn').addEventListener('click', toggleAudio);
 
-    document.getElementById('title-team-btn').addEventListener('click', openTeamModal);
+        document.getElementById('title-team-btn').addEventListener('click', openTeamModal);
     document.getElementById('team-confirm-btn').addEventListener('click', confirmTeamLoadout);
     document.getElementById('team-preset-btn').addEventListener('click', setDefaultTeamLoadout);
     document.getElementById('team-cancel-btn').addEventListener('click', closeTeamModal);
